@@ -8,6 +8,7 @@ import os
 import sys
 from pathlib import Path
 from datetime import datetime, timedelta
+import time
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 
 # Добавляем путь к модулям бота
@@ -452,6 +453,7 @@ def add_category():
                 
                 # Уведомляем в Telegram канал
                 try:
+                    time.sleep(240)  # Задержка 4 минуты для стабильности соединения
                     telegram_bot.send_to_channel(f'''
 🆕 <b>Новая категория добавлена!</b>
 
@@ -651,6 +653,7 @@ def add_product():
                 
                 # Исправлена логика отправки уведомлений - добавлена обработка ошибок
                 try:
+                    time.sleep(240)  # Задержка 4 минуты для стабильности соединения
                     if image_url:
                         telegram_bot.send_photo_to_channel(image_url, message)
                     else:
@@ -760,6 +763,7 @@ def notify_new_product():
             '''
             
             try:
+                time.sleep(240)  # Задержка 4 минуты для стабильности соединения
                 if p[4]:  # Если есть изображение
                     telegram_bot.send_photo_to_channel(p[4], message)
                 else:
