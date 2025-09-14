@@ -177,8 +177,7 @@
                 </h5>
             </div>
             <div class="card-body">
-                {% set user_id = order_data.order[1] %}
-                {% set customer_info = db.execute_query('SELECT name, phone, email, created_at FROM users WHERE id = ?', (user_id,))[0] %}
+                {% if customer_info %}
                 
                 <div class="mb-3">
                     <strong>Имя:</strong><br>
@@ -210,6 +209,12 @@
                         Профиль клиента
                     </a>
                 </div>
+                {% else %}
+                <div class="text-center text-muted">
+                    <i class="fas fa-user-slash fa-2x mb-2"></i>
+                    <p>Информация о клиенте недоступна</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

@@ -394,7 +394,7 @@ class DatabaseManager:
     def get_cart_items(self, user_id: int) -> List:
         """Получение товаров из корзины"""
         return self.execute_query('''
-            SELECT c.id, p.name, p.price, c.quantity, p.image_url, p.id as product_id
+            SELECT c.id, p.name, p.price, c.quantity, p.image_url, p.id as product_id, p.stock
             FROM cart c
             JOIN products p ON c.product_id = p.id
             WHERE c.user_id = ?

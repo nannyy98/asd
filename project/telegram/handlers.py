@@ -185,6 +185,87 @@ class MessageHandler:
         elif state.startswith('quantity_'):
             self._handle_quantity_input(message, state_info, user_data[0][0])
     
+    def _handle_checkout_address(self, message: Dict[str, Any], user_id: int):
+        """Обработка адреса при оформлении заказа"""
+        telegram_id = message['from']['id']
+        chat_id = message['chat']['id']
+        
+        if message.get('text') == '❌ Отмена':
+            del self.user_states[telegram_id]
+            self._show_cart(chat_id, user_id)
+            return
+        
+        address = ""
+        
+        # Обработка геолокации
+        if 'location' in message:
+            lat = message['location']['latitude']
+            lon = message['location']['longitude']
+            address = f"Геолокация: {lat}, {lon}"
+        # Обработка текстового адреса
+        elif 'text' in message:
+            address = sanitize_text(message['text'], 200)
+        
+        if not address:
+            self.bot.send_message(chat_id, "❌ Пожалуйста, укажите адрес доставки")
+            return
+        
+        # Получаем данные корзины
+        state_info = self.user_states[telegram_id]
+        cart_items = state_info['data']['cart_items']
+        total = calculate_cart_total(cart_items)
+        
+        # Создаем заказ
+        order_id = self.db.create_order(
+            user_id=user_id,
+            total_amount=total,
+            delivery_address=address,
+            payment_method="cash"
+        )
+        
+        if order_id:
+            # Добавляем товары в заказ
+            for item in cart_items:
+                self.db.execute_query('''
+                    INSERT INTO order_items (order_id, product_id, quantity, price)
+                    VALUES (?, ?, ?, ?)
+                ''', (order_id, item[5], item[3], item[2]))
+                
+                # Уменьшаем остаток на складе
+                self.db.execute_query('''
+                    UPDATE products SET stock = stock - ?, sales_count = sales_count + ?
+                    WHERE id = ?
+                ''', (item[3], item[3], item[5]))
+            
+            # Очищаем корзину
+            self.db.clear_cart(user_id)
+            
+            # Удаляем состояние
+            del self.user_states[telegram_id]
+            
+            # Отправляем подтверждение
+            success_text = f"""
+✅ <b>Заказ #{order_id} успешно оформлен!</b>
+
+📦 Товаров: {len(cart_items)}
+💰 Сумма: {format_price(total)}
+📍 Адрес: {address}
+💳 Оплата: Наличными при получении
+
+📞 Мы свяжемся с вами в ближайшее время для подтверждения.
+
+Спасибо за покупку! 🎉
+            """
+            
+            self.bot.send_message(chat_id, success_text, self.keyboards.main_menu())
+            
+            # Уведомляем админов
+            if hasattr(self, 'notification_service'):
+                self.notification_service.notify_order_created(order_id)
+        else:
+            self.bot.send_message(chat_id, "❌ Ошибка создания заказа")
+            del self.user_states[telegram_id]
+    
     def _handle_registration_name(self, message: Dict[str, Any], state_info: Dict):
         """Обработка ввода имени при регистрации"""
         telegram_id = message['from']['id']

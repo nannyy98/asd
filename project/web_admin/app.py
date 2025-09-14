@@ -145,6 +145,45 @@ def orders():
         logger.error(f"Ошибка загрузки заказов: {e}")
         return render_template('orders.html', orders=[])
 
+@app.route('/order_detail/<int:order_id>')
+@login_required
+def order_detail(order_id):
+    """Детали заказа"""
+    try:
+        # Получаем заказ
+        order_data = db.execute_query('''
+            SELECT o.id, o.user_id, o.total_amount, o.status, o.delivery_address, 
+                   o.payment_method, o.promo_discount, o.created_at,
+                   u.name, u.phone, u.email
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            WHERE o.id = ?
+        ''', (order_id,))
+        
+        if not order_data:
+            flash('Заказ не найден')
+            return redirect(url_for('orders'))
+        
+        # Получаем товары заказа
+        order_items = db.execute_query('''
+            SELECT oi.quantity, oi.price, p.name, p.image_url
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = ?
+        ''', (order_id,))
+        
+        order_detail_data = {
+            'order': order_data[0],
+            'items': order_items or []
+        }
+        
+        return render_template('order_detail.html', order_data=order_detail_data, db=db)
+        
+    except Exception as e:
+        logger.error(f"Ошибка загрузки деталей заказа: {e}")
+        flash('Ошибка загрузки заказа')
+        return redirect(url_for('orders'))
+
 @app.route('/products')
 @login_required
 def products():
