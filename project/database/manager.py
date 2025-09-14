@@ -315,10 +315,15 @@ class DatabaseManager:
         if existing:
             return existing[0][0]
         
-        return self.execute_query('''
+        user_id = self.execute_query('''
             INSERT INTO users (telegram_id, name, phone, email, language)
             VALUES (?, ?, ?, ?, ?)
         ''', (telegram_id, name, phone, email, language))
+        
+        if user_id:
+            logger.info(f"Новый пользователь зарегистрирован: {name} (ID: {user_id}, Telegram: {telegram_id})")
+        
+        return user_id
     
     # Методы для работы с товарами
     def get_categories(self) -> List:

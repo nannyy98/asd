@@ -123,22 +123,22 @@
                         </td>
                         <td>
                             <div class="text-center">
-                                <div class="h5 mb-0 text-primary">{{ customer[5] }}</div>
+                                <div class="h5 mb-0 text-primary">{{ customer[5] if customer|length > 5 else 0 }}</div>
                                 <small class="text-muted">заказов</small>
                             </div>
                         </td>
                         <td>
-                            <div class="fw-bold text-success h5 mb-0">${{ "%.2f"|format(customer[6]) }}</div>
-                            {% if customer[5] > 0 %}
+                            <div class="fw-bold text-success h5 mb-0">${{ "%.2f"|format(customer[6] if customer|length > 6 else 0) }}</div>
+                            {% if customer|length > 5 and customer[5] > 0 %}
                                 <small class="text-muted">
                                     Средний: ${{ "%.2f"|format(customer[6] / customer[5]) }}
                                 </small>
                             {% endif %}
                         </td>
                         <td>
-                            {% if customer[7] %}
+                            {% if customer|length > 7 and customer[7] %}
                                 <div class="fw-bold">{{ customer[7][:10] }}</div>
-                                <small class="text-muted">{{ customer[7][11:16] }}</small>
+                                <small class="text-muted">{{ customer[7][11:16] if customer[7]|length > 16 else '' }}</small>
                             {% else %}
                                 <span class="text-muted">
                                     <i class="fas fa-minus"></i> Нет заказов
@@ -146,19 +146,15 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if customer[7] %}
-                                {% set days_ago = ((today_stats[0] if today_stats else 0) - customer[7][:10]|length) %}
-                                {% if customer[7] >= (now - timedelta(days=7)).strftime('%Y-%m-%d') %}
+                            {% if customer|length > 7 and customer[7] %}
+                                {% set recent_date = (moment().subtract(7, 'days').format('YYYY-MM-DD')) %}
+                                {% if customer[7][:10] >= recent_date %}
                                     <span class="badge bg-success">
                                         <i class="fas fa-fire me-1"></i>Активный
                                     </span>
-                                {% elif customer[7] >= (now - timedelta(days=30)).strftime('%Y-%m-%d') %}
+                                {% else %}
                                     <span class="badge bg-warning">
                                         <i class="fas fa-clock me-1"></i>Умеренный
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-danger">
-                                        <i class="fas fa-sleep me-1"></i>Неактивный
                                     </span>
                                 {% endif %}
                             {% else %}

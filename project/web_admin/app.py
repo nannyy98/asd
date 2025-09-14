@@ -174,22 +174,112 @@ def products():
 def customers():
     """Страница клиентов"""
     try:
+        search = request.args.get('search', '')
+        page = int(request.args.get('page', 1))
+        per_page = 20
+        offset = (page - 1) * per_page
+        
+        # Поиск клиентов
+        if search:
+            customers_data = db.execute_query('''
+                SELECT u.id, u.name, u.phone, u.email, u.created_at,
+                       COUNT(o.id) as orders_count,
+                       COALESCE(SUM(o.total_amount), 0) as total_spent,
+                       MAX(o.created_at) as last_order
+                FROM users u
+                LEFT JOIN orders o ON u.id = o.user_id AND o.status != 'cancelled'
+                WHERE u.is_admin = 0 AND (
+                    u.name LIKE ? OR 
+                    u.phone LIKE ? OR 
+                    u.email LIKE ?
+                )
+                GROUP BY u.id, u.name, u.phone, u.email, u.created_at
+                ORDER BY total_spent DESC
+                LIMIT ? OFFSET ?
+            ''', (f'%{search}%', f'%{search}%', f'%{search}%', per_page, offset))
+        else:
+            customers_data = db.execute_query('''
+                SELECT u.id, u.name, u.phone, u.email, u.created_at,
+                       COUNT(o.id) as orders_count,
+                       COALESCE(SUM(o.total_amount), 0) as total_spent,
+                       MAX(o.created_at) as last_order
+                FROM users u
+                LEFT JOIN orders o ON u.id = o.user_id AND o.status != 'cancelled'
+                WHERE u.is_admin = 0
+                GROUP BY u.id, u.name, u.phone, u.email, u.created_at
+                ORDER BY total_spent DESC
+                LIMIT ? OFFSET ?
+            ''', (per_page, offset))
+        
+        # Подсчет общего количества для пагинации
+        total_count = db.execute_query('''
+            SELECT COUNT(*) FROM users WHERE is_admin = 0
+        ''')[0][0] if db.execute_query('SELECT COUNT(*) FROM users WHERE is_admin = 0') else 0
+        
+        total_pages = (total_count + per_page - 1) // per_page
+        
+        return render_template('customers.html', 
+                             customers=customers_data or [], 
+                             search=search,
+                             current_page=page,
+                             total_pages=total_pages)
+    except Exception as e:
+        logger.error(f"Ошибка загрузки клиентов: {e}")
+        return render_template('customers.html', customers=[], search='', current_page=1, total_pages=1)
+
+@app.route('/export_customers')
+@login_required
+def export_customers():
+    """Экспорт клиентов в CSV"""
+    try:
+        import csv
+        import io
+        from flask import make_response
+        
         customers_data = db.execute_query('''
-            SELECT u.id, u.name, u.phone, u.email, u.created_at,
+            SELECT u.id, u.name, u.phone, u.email, u.language, u.created_at,
                    COUNT(o.id) as orders_count,
                    COALESCE(SUM(o.total_amount), 0) as total_spent,
                    MAX(o.created_at) as last_order
             FROM users u
             LEFT JOIN orders o ON u.id = o.user_id AND o.status != 'cancelled'
             WHERE u.is_admin = 0
-            GROUP BY u.id, u.name, u.phone, u.email, u.created_at
+            GROUP BY u.id, u.name, u.phone, u.email, u.language, u.created_at
             ORDER BY total_spent DESC
         ''')
         
-        return render_template('customers.html', customers=customers_data or [])
+        # Создаем CSV
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Заголовки
+        writer.writerow([
+            'ID', 'Имя', 'Телефон', 'Email', 'Язык', 'Дата регистрации',
+            'Количество заказов', 'Потрачено', 'Последний заказ'
+        ])
+        
+        # Данные
+        for customer in customers_data or []:
+            writer.writerow([
+                customer[0],  # ID
+                customer[1],  # Имя
+                customer[2] or 'Не указан',  # Телефон
+                customer[3] or 'Не указан',  # Email
+                customer[4],  # Язык
+                customer[5][:10] if customer[5] else '',  # Дата регистрации
+                customer[6],  # Количество заказов
+                f"${customer[7]:.2f}",  # Потрачено
+                customer[8][:10] if customer[8] else 'Нет заказов'  # Последний заказ
+            ])
+        
+        # Создаем ответ
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+        response.headers['Content-Disposition'] = f'attachment; filename=customers_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        
+        return response
+        
     except Exception as e:
-        logger.error(f"Ошибка загрузки клиентов: {e}")
-        return render_template('customers.html', customers=[])
 
 @app.route('/analytics')
 @login_required
