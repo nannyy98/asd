@@ -37,9 +37,9 @@ class AppConfig:
     """Главная конфигурация приложения"""
     environment: str = "development"
     debug: bool = True
-    database: DatabaseConfig = DatabaseConfig()
-    security: SecurityConfig = SecurityConfig()
-    bot: BotConfig = BotConfig(token="")
+    database: DatabaseConfig = field(default_factory=DatabaseConfig)
+    security: SecurityConfig = field(default_factory=SecurityConfig)
+    bot: BotConfig = field(default_factory=lambda: BotConfig(token=""))
 
 def load_config() -> AppConfig:
     """Загрузка конфигурации из переменных окружения"""
