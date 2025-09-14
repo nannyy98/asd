@@ -114,6 +114,7 @@ class TelegramBotIntegration:
         for user in user_list:
             telegram_id = user[0] if isinstance(user, (list, tuple)) else user.get('telegram_id')
             try:
+                time.sleep(240)  # Задержка 4 минуты для стабильности соединения
                 result = self.send_message(telegram_id, message)
                 if result and result.get('ok'):
                     success_count += 1

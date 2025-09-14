@@ -55,6 +55,7 @@ class TelegramBot:
     def edit_message_reply_markup(self, chat_id: int, message_id: int, 
                                  reply_markup: Dict) -> bool:
         """Редактирование клавиатуры сообщения"""
+        time.sleep(240)  # Задержка 4 минуты для стабильности соединения
         url = f"{self.base_url}/editMessageReplyMarkup"
         data = {
             'chat_id': chat_id,

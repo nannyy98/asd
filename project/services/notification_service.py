@@ -91,6 +91,8 @@ class NotificationService:
             if result and result.get('ok'):
                 # Сохраняем в базу
                 self.db.add_notification(
+                try:
+                    time.sleep(240)  # Задержка 4 минуты для стабильности соединения
                     notification['user_id'],
                     notification['title'],
                     notification['message'],
@@ -99,6 +101,8 @@ class NotificationService:
                 logger.info(f"Уведомление отправлено пользователю {telegram_id}")
             else:
                 raise NotificationError("Failed to send message")
+                except Exception as e:
+                    logger.error(f"Ошибка отправки уведомления: {e}")
                 
         except Exception as e:
             notification['attempts'] += 1
@@ -225,6 +229,7 @@ class NotificationService:
         
         for user in users:
             try:
+                time.sleep(240)  # Задержка 4 минуты для стабильности соединения
                 result = self.bot.send_message(user[0], message)
                 if result and result.get('ok'):
                     success_count += 1
