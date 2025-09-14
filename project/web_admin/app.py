@@ -24,6 +24,11 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY', 'change-in-production')
 db = DatabaseManager()
 analytics = AnalyticsService(db)
 
+# Добавляем config в контекст шаблонов
+@app.context_processor
+def inject_config():
+    return {'app_config': config}
+
 def login_required(f):
     """Декоратор для проверки авторизации"""
     def decorated_function(*args, **kwargs):
