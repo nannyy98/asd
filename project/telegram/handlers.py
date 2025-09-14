@@ -2,7 +2,7 @@
 Обработчики сообщений Telegram бота
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from core.logger import logger
 from core.utils import format_price, calculate_cart_total, sanitize_text
 from core.exceptions import ValidationError
