@@ -116,6 +116,8 @@ class MessageHandler:
             self._start_search(chat_id, telegram_id)
         elif text == '❤️ Избранное':
             self._show_favorites(chat_id, user_id)
+        elif text == 'ℹ️ Помощь':
+            self._show_help(chat_id)
         elif text == '🔙 Назад':
             self._show_main_menu(chat_id, user_data[0][2])
         elif text == '🔙 К категориям':
@@ -194,21 +196,31 @@ class MessageHandler:
             self.bot.send_message(chat_id, "❌ Имя должно содержать минимум 2 символа")
             return
         
-        state_info['data']['name'] = name
-        state_info['state'] = 'registration_phone'
+        # Завершаем регистрацию сразу с именем
+        user_id = self.db.create_user(
+            telegram_id=telegram_id,
+            name=name
+        )
         
-        phone_text = f"📱 <b>Отлично, {name}!</b>\n\nТеперь поделитесь номером телефона или пропустите этот шаг."
-        
-        keyboard = {
-            'keyboard': [
-                [{'text': '📱 Поделиться номером', 'request_contact': True}],
-                ['⏭ Пропустить']
-            ],
-            'resize_keyboard': True,
-            'one_time_keyboard': True
-        }
-        
-        self.bot.send_message(chat_id, phone_text, keyboard)
+        if user_id:
+            del self.user_states[telegram_id]
+            
+            success_text = f"""
+✅ <b>Регистрация завершена!</b>
+
+Добро пожаловать в наш магазин, {name}! 🎉
+
+Теперь вы можете:
+• Просматривать каталог товаров
+• Добавлять товары в корзину
+• Оформлять заказы
+
+Приятных покупок! 🛍
+            """
+            
+            self.bot.send_message(chat_id, success_text, self.keyboards.main_menu())
+        else:
+            self.bot.send_message(chat_id, "❌ Ошибка регистрации. Попробуйте позже.")
     
     def _handle_registration_phone(self, message: Dict[str, Any], state_info: Dict):
         """Обработка ввода телефона"""
@@ -443,6 +455,8 @@ class MessageHandler:
         if reviews:
             avg_rating = sum(review[0] for review in reviews) / len(reviews)
             product_text += f"\n⭐ Рейтинг: {avg_rating:.1f}/5 ({len(reviews)} отзывов)"
+        
+        product_text += f"\n\n<b>Выберите количество:</b>"
         
         # Клавиатура с выбором количества
         keyboard = self.keyboards.product_quantity_selection(product[0], product[7])
