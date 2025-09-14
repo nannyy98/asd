@@ -15,7 +15,7 @@ class KeyboardBuilder:
                 ['🛍 Каталог', '🛒 Корзина'],
                 ['📋 Мои заказы', '👤 Профиль'],
                 ['🔍 Поиск', '❤️ Избранное'],
-                ['🎁 Промокоды', 'ℹ️ Помощь']
+                ['ℹ️ Помощь']
             ],
             'resize_keyboard': True,
             'one_time_keyboard': False
@@ -32,7 +32,7 @@ class KeyboardBuilder:
                 row.append(f"{categories[i + 1][3]} {categories[i + 1][1]}")
             keyboard.append(row)
         
-        keyboard.append(['🔙 Главная'])
+        keyboard.append(['🏠 Главная'])
         
         return {
             'keyboard': keyboard,
@@ -54,6 +54,32 @@ class KeyboardBuilder:
             'keyboard': keyboard,
             'resize_keyboard': True,
             'one_time_keyboard': False
+        }
+    
+    @staticmethod
+    def product_quantity_selection(product_id: int, max_stock: int) -> Dict[str, Any]:
+        """Выбор количества товара"""
+        keyboard = []
+        
+        # Первый ряд - количество от 1 до 5
+        row1 = []
+        for i in range(1, min(6, max_stock + 1)):
+            row1.append({'text': f'{i} шт.', 'callback_data': f'quantity_{product_id}_{i}'})
+        keyboard.append(row1)
+        
+        # Второй ряд - если есть больше 5 в наличии
+        if max_stock > 5:
+            row2 = []
+            for i in range(6, min(11, max_stock + 1)):
+                row2.append({'text': f'{i} шт.', 'callback_data': f'quantity_{product_id}_{i}'})
+            if row2:
+                keyboard.append(row2)
+        
+        # Кнопка "Назад"
+        keyboard.append([{'text': '🔙 Назад', 'callback_data': 'back_to_catalog'}])
+        
+        return {
+            'inline_keyboard': keyboard
         }
     
     @staticmethod

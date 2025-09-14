@@ -127,6 +127,93 @@ def dashboard():
                              recent_orders=[],
                              top_products=[])
 
+@app.route('/orders')
+@login_required
+def orders():
+    """Страница заказов"""
+    try:
+        orders_data = db.execute_query('''
+            SELECT o.id, o.total_amount, o.status, o.created_at, u.name, u.phone, u.email, o.delivery_address, o.payment_method
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            ORDER BY o.created_at DESC
+            LIMIT 50
+        ''')
+        
+        return render_template('orders.html', orders=orders_data or [])
+    except Exception as e:
+        logger.error(f"Ошибка загрузки заказов: {e}")
+        return render_template('orders.html', orders=[])
+
+@app.route('/products')
+@login_required
+def products():
+    """Страница товаров"""
+    try:
+        # Получаем категории для фильтра
+        categories = db.get_categories()
+        
+        # Получаем товары с информацией о категориях
+        products_data = db.execute_query('''
+            SELECT p.id, p.name, p.price, p.stock, p.is_active, c.name as category_name, 
+                   p.sales_count, p.views
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            ORDER BY p.created_at DESC
+        ''')
+        
+        return render_template('products.html', 
+                             products=products_data or [], 
+                             categories=categories or [])
+    except Exception as e:
+        logger.error(f"Ошибка загрузки товаров: {e}")
+        return render_template('products.html', products=[], categories=[])
+
+@app.route('/customers')
+@login_required
+def customers():
+    """Страница клиентов"""
+    try:
+        customers_data = db.execute_query('''
+            SELECT u.id, u.name, u.phone, u.email, u.created_at,
+                   COUNT(o.id) as orders_count,
+                   COALESCE(SUM(o.total_amount), 0) as total_spent,
+                   MAX(o.created_at) as last_order
+            FROM users u
+            LEFT JOIN orders o ON u.id = o.user_id AND o.status != 'cancelled'
+            WHERE u.is_admin = 0
+            GROUP BY u.id, u.name, u.phone, u.email, u.created_at
+            ORDER BY total_spent DESC
+        ''')
+        
+        return render_template('customers.html', customers=customers_data or [])
+    except Exception as e:
+        logger.error(f"Ошибка загрузки клиентов: {e}")
+        return render_template('customers.html', customers=[])
+
+@app.route('/analytics')
+@login_required
+def analytics_page():
+    """Страница аналитики"""
+    try:
+        period = request.args.get('period', '30')
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=int(period))
+        
+        sales_report = analytics.get_sales_report(
+            start_date.strftime('%Y-%m-%d'),
+            end_date.strftime('%Y-%m-%d')
+        )
+        
+        return render_template('analytics.html', 
+                             sales_report=sales_report,
+                             period=period)
+    except Exception as e:
+        logger.error(f"Ошибка загрузки аналитики: {e}")
+        return render_template('analytics.html', 
+                             sales_report={'summary': (0, 0, 0, 0), 'top_products': []},
+                             period='30')
+
 @app.route('/api/chart_data')
 @login_required
 def chart_data():
@@ -179,6 +266,23 @@ def chart_data():
     except Exception as e:
         logger.error(f"Ошибка получения данных графика: {e}")
         return jsonify({'labels': [], 'data': []})
+
+@app.route('/update_order_status', methods=['POST'])
+@login_required
+def update_order_status():
+    """Обновление статуса заказа"""
+    try:
+        order_id = request.form['order_id']
+        status = request.form['status']
+        
+        db.update_order_status(order_id, status)
+        flash(f'Статус заказа #{order_id} обновлен')
+        
+    except Exception as e:
+        logger.error(f"Ошибка обновления статуса: {e}")
+        flash('Ошибка обновления статуса')
+    
+    return redirect(url_for('orders'))
 
 if __name__ == '__main__':
     app.run(debug=config.debug, host='0.0.0.0', port=5000)

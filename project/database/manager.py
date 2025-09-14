@@ -339,7 +339,7 @@ class DatabaseManager:
     def get_product_by_id(self, product_id: int) -> Optional[List]:
         """Получение товара по ID"""
         result = self.execute_query(
-            'SELECT * FROM products WHERE id = ?',
+            'SELECT * FROM products WHERE id = ? AND is_active = 1',
             (product_id,)
         )
         return result[0] if result else None

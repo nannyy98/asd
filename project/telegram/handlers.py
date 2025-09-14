@@ -59,12 +59,16 @@ class MessageHandler:
             
             if data.startswith('add_to_cart_'):
                 self._handle_add_to_cart(chat_id, data, user_id)
-            elif data.startswith('add_to_favorites_'):
-                self._handle_add_to_favorites(chat_id, data, user_id)
-            elif data.startswith('cart_'):
-                self._handle_cart_action(chat_id, data, user_id)
-            elif data.startswith('rate_'):
-                self._handle_rating(chat_id, data, user_id)
+            elif data.startswith('quantity_'):
+                self._handle_quantity_selection(chat_id, data, user_id, callback_query)
+            elif data.startswith('order_product_'):
+                self._handle_order_product(chat_id, data, user_id)
+            elif data == 'goto_cart':
+                self._show_cart(chat_id, user_id)
+            elif data == 'continue_shopping':
+                self._show_catalog(chat_id)
+            elif data == 'back_to_main':
+                self._show_main_menu(chat_id, user_data[0][2])
             
         except Exception as e:
             logger.error(f"Ошибка обработки callback: {e}", exc_info=True)
@@ -112,7 +116,13 @@ class MessageHandler:
             self._start_search(chat_id, telegram_id)
         elif text == '❤️ Избранное':
             self._show_favorites(chat_id, user_id)
-        elif text.startswith('📱') or text.startswith('👕') or text.startswith('🏠'):
+        elif text == '🔙 Назад':
+            self._show_main_menu(chat_id, user_data[0][2])
+        elif text == '🔙 К категориям':
+            self._show_catalog(chat_id)
+        elif text == '🏠 Главная':
+            self._show_main_menu(chat_id, user_data[0][2])
+        elif text.startswith('📱') or text.startswith('👕') or text.startswith('🏠') or text.startswith('⚽') or text.startswith('💄') or text.startswith('📚'):
             self._handle_category_selection(chat_id, text)
         elif text.startswith('🛍'):
             self._handle_product_selection(chat_id, text, user_id)
@@ -171,6 +181,8 @@ class MessageHandler:
             del self.user_states[telegram_id]
         elif state == 'checkout_address':
             self._handle_checkout_address(message, user_data[0][0])
+        elif state.startswith('quantity_'):
+            self._handle_quantity_input(message, state_info, user_data[0][0])
     
     def _handle_registration_name(self, message: Dict[str, Any], state_info: Dict):
         """Обработка ввода имени при регистрации"""
@@ -324,7 +336,7 @@ class MessageHandler:
 
 Перейдите в каталог и сделайте первую покупку!
             """
-            self.bot.send_message(chat_id, no_orders_text, self.keyboards.main_menu())
+            self.bot.send_message(chat_id, no_orders_text, self.keyboards.back_button())
             return
         
         orders_text = "📋 <b>Ваши заказы</b>\n\n"
@@ -335,6 +347,20 @@ class MessageHandler:
             orders_text += f"📅 {order[7][:16]}\n\n"
         
         self.bot.send_message(chat_id, orders_text, self.keyboards.back_button())
+    
+    def _show_profile(self, chat_id: int, user_data: List):
+        """Показ профиля пользователя"""
+        profile_text = f"""
+👤 <b>Ваш профиль</b>
+
+📝 Имя: {user_data[2]}
+📱 Телефон: {user_data[3] or 'Не указан'}
+📧 Email: {user_data[4] or 'Не указан'}
+🌍 Язык: {user_data[5]}
+📅 Регистрация: {user_data[7][:10]}
+        """
+        
+        self.bot.send_message(chat_id, profile_text, self.keyboards.back_button())
     
     def _handle_category_selection(self, chat_id: int, text: str):
         """Обработка выбора категории"""
@@ -397,11 +423,11 @@ class MessageHandler:
             (product[0],)
         )
         
-        # Показываем товар
-        self._show_product_details(chat_id, product)
+        # Показываем товар с выбором количества
+        self._show_product_with_quantity(chat_id, product)
     
-    def _show_product_details(self, chat_id: int, product: List):
-        """Показ деталей товара"""
+    def _show_product_with_quantity(self, chat_id: int, product: List):
+        """Показ товара с выбором количества"""
         product_text = f"🛍 <b>{product[1]}</b>\n\n"
         
         if product[2]:
@@ -418,24 +444,76 @@ class MessageHandler:
             avg_rating = sum(review[0] for review in reviews) / len(reviews)
             product_text += f"\n⭐ Рейтинг: {avg_rating:.1f}/5 ({len(reviews)} отзывов)"
         
-        keyboard = self.keyboards.product_actions(product[0])
+        # Клавиатура с выбором количества
+        keyboard = self.keyboards.product_quantity_selection(product[0], product[7])
         
         if product[6]:  # Если есть изображение
             self.bot.send_photo(chat_id, product[6], product_text, keyboard)
         else:
             self.bot.send_message(chat_id, product_text, keyboard)
     
+    def _handle_quantity_selection(self, chat_id: int, data: str, user_id: int, callback_query: Dict):
+        """Обработка выбора количества"""
+        parts = data.split('_')
+        product_id = int(parts[1])
+        quantity = int(parts[2])
+        
+        # Получаем товар
+        product = self.db.get_product_by_id(product_id)
+        if not product:
+            return
+        
+        # Проверяем наличие
+        if quantity > product[7]:
+            self.bot.send_message(chat_id, f"❌ В наличии только {product[7]} шт.")
+            return
+        
+        # Показываем подтверждение заказа
+        confirm_text = f"""
+🛍 <b>{product[1]}</b>
+
+💰 Цена: {format_price(product[3])}
+📦 Количество: {quantity} шт.
+💳 <b>Итого: {format_price(product[3] * quantity)}</b>
+
+Подтвердите заказ:
+        """
+        
+        keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': '✅ Заказать', 'callback_data': f'order_product_{product_id}_{quantity}'},
+                    {'text': '🛒 В корзину', 'callback_data': f'add_to_cart_{product_id}_{quantity}'}
+                ],
+                [
+                    {'text': '🔙 Назад к товару', 'callback_data': f'back_to_product_{product_id}'}
+                ]
+            ]
+        }
+        
+        # Редактируем сообщение
+        try:
+            self.bot.edit_message_reply_markup(
+                chat_id, 
+                callback_query['message']['message_id'], 
+                keyboard
+            )
+            self.bot.send_message(chat_id, confirm_text, keyboard)
+        except:
+            self.bot.send_message(chat_id, confirm_text, keyboard)
+    
     def _handle_add_to_cart(self, chat_id: int, data: str, user_id: int):
         """Добавление товара в корзину"""
-        product_id = int(data.split('_')[-1])
+        parts = data.split('_')
+        product_id = int(parts[3])
+        quantity = int(parts[4]) if len(parts) > 4 else 1
         
-        result = self.db.add_to_cart(user_id, product_id, 1)
+        result = self.db.add_to_cart(user_id, product_id, quantity)
         
         if result:
             product = self.db.get_product_by_id(product_id)
-            success_text = f"✅ <b>{product[1]}</b> добавлен в корзину!"
+            success_text = f"✅ <b>{product[1]}</b> ({quantity} шт.) добавлен в корзину!"
             
-            # Показываем кнопки для дальнейших действий
             keyboard = {
                 'inline_keyboard': [
                     [
@@ -448,6 +526,67 @@ class MessageHandler:
             self.bot.send_message(chat_id, success_text, keyboard)
         else:
             self.bot.send_message(chat_id, "❌ Не удалось добавить товар в корзину")
+    
+    def _handle_order_product(self, chat_id: int, data: str, user_id: int):
+        """Обработка быстрого заказа товара"""
+        parts = data.split('_')
+        product_id = int(parts[2])
+        quantity = int(parts[3])
+        
+        product = self.db.get_product_by_id(product_id)
+        if not product:
+            return
+        
+        total_amount = product[3] * quantity
+        
+        # Создаем заказ
+        order_id = self.db.create_order(
+            user_id=user_id,
+            total_amount=total_amount,
+            delivery_address="Не указан",
+            payment_method="cash"
+        )
+        
+        if order_id:
+            # Добавляем товар в заказ
+            self.db.execute_query('''
+                INSERT INTO order_items (order_id, product_id, quantity, price)
+                VALUES (?, ?, ?, ?)
+            ''', (order_id, product_id, quantity, product[3]))
+            
+            # Уменьшаем остаток
+            self.db.execute_query('''
+                UPDATE products SET stock = stock - ?, sales_count = sales_count + ?
+                WHERE id = ?
+            ''', (quantity, quantity, product_id))
+            
+            success_text = f"""
+✅ <b>Заказ #{order_id} успешно создан!</b>
+
+🛍 Товар: {product[1]}
+📦 Количество: {quantity} шт.
+💰 Сумма: {format_price(total_amount)}
+
+📞 Мы свяжемся с вами в ближайшее время для подтверждения.
+
+Спасибо за покупку! 🎉
+            """
+            
+            keyboard = {
+                'inline_keyboard': [
+                    [
+                        {'text': '🏠 Главное меню', 'callback_data': 'back_to_main'}
+                    ]
+                ]
+            }
+            
+            self.bot.send_message(chat_id, success_text, keyboard)
+            
+            # Уведомляем админов
+            if hasattr(self, 'notification_service'):
+                self.notification_service.notify_order_created(order_id)
+        else:
+            self.bot.send_message(chat_id, "❌ Ошибка создания заказа")
     
     def _search_products(self, chat_id: int, query: str):
         """Поиск товаров"""
@@ -462,7 +601,7 @@ class MessageHandler:
 • Использовать другие ключевые слова
 • Просмотреть каталог по категориям
             """
-            self.bot.send_message(chat_id, not_found_text, self.keyboards.main_menu())
+            self.bot.send_message(chat_id, not_found_text, self.keyboards.back_button())
             return
         
         search_text = f"🔍 <b>Результаты поиска: '{query}'</b>\n\n"
@@ -474,6 +613,46 @@ class MessageHandler:
             search_text += f"📦 В наличии: {product[7]} шт.\n\n"
         
         self.bot.send_message(chat_id, search_text, self.keyboards.back_button())
+    
+    def _start_search(self, chat_id: int, telegram_id: int):
+        """Начало поиска"""
+        self.user_states[telegram_id] = {'state': 'search_products'}
+        
+        search_text = """
+🔍 <b>Поиск товаров</b>
+
+Введите название товара или ключевые слова для поиска:
+        """
+        
+        keyboard = {
+            'keyboard': [['🔙 Отмена']],
+            'resize_keyboard': True,
+            'one_time_keyboard': True
+        }
+        
+        self.bot.send_message(chat_id, search_text, keyboard)
+    
+    def _show_favorites(self, chat_id: int, user_id: int):
+        """Показ избранных товаров"""
+        favorites = self.db.get_user_favorites(user_id)
+        
+        if not favorites:
+            empty_text = """
+❤️ <b>Ваш список избранного пуст</b>
+
+Добавляйте понравившиеся товары в избранное!
+            """
+            self.bot.send_message(chat_id, empty_text, self.keyboards.back_button())
+            return
+        
+        favorites_text = "❤️ <b>Избранные товары</b>\n\n"
+        
+        for product in favorites[:10]:
+            favorites_text += f"🛍 <b>{product[1]}</b>\n"
+            favorites_text += f"💰 {format_price(product[3])}\n"
+            favorites_text += f"📦 В наличии: {product[7]} шт.\n\n"
+        
+        self.bot.send_message(chat_id, favorites_text, self.keyboards.back_button())
     
     def _show_help(self, chat_id: int):
         """Показ справки"""
@@ -489,14 +668,14 @@ class MessageHandler:
 
 <b>Как сделать заказ:</b>
 1️⃣ Выберите товары в каталоге
-2️⃣ Добавьте их в корзину
-3️⃣ Оформите заказ
-4️⃣ Укажите адрес и способ оплаты
+2️⃣ Укажите количество
+3️⃣ Нажмите "Заказать" или добавьте в корзину
+4️⃣ Мы свяжемся с вами для подтверждения
 
 ❓ По вопросам обращайтесь к администратору.
         """
         
-        self.bot.send_message(chat_id, help_text, self.keyboards.main_menu())
+        self.bot.send_message(chat_id, help_text, self.keyboards.back_button())
     
     def _validate_email(self, email: str) -> bool:
         """Валидация email"""
