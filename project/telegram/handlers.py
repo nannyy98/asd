@@ -139,12 +139,10 @@ class MessageHandler:
         
         # Получаем имя из Telegram
         suggested_name = message['from'].get('first_name', '')
-        if message['from'].get('last_name'):
-            suggested_name += f" {message['from']['last_name']}"
         
         self.user_states[telegram_id] = {
             'state': 'registration_name',
-            'data': {'suggested_name': suggested_name}
+            'data': {}
         }
         
         welcome_text = """
@@ -152,7 +150,8 @@ class MessageHandler:
 
 Для начала работы нужно пройти быструю регистрацию.
 
-👤 <b>Как вас зовут?</b>
+👤 <b>Введите ваше имя:</b>
+(Только имя, без фамилии)
         """
         
         keyboard = {
