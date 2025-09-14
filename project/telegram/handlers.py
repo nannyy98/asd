@@ -349,15 +349,20 @@ class MessageHandler:
         
         total = calculate_cart_total(cart_items)
         
-        cart_text = f"🛒 <b>Ваша корзина</b>\n\n"
+        cart_text = "🛒 <b>Ваша корзина</b>\n\n"
         
         for item in cart_items:
+            item_total = item[2] * item[3]
             cart_text += f"🛍 <b>{item[1]}</b>\n"
-            cart_text += f"💰 {format_price(item[2])} × {item[3]} = {format_price(item[2] * item[3])}\n\n"
+            cart_text += f"💰 {format_price(item[2])} × {item[3]} шт. = <b>{format_price(item_total)}</b>\n"
+            cart_text += f"ID товара: {item[5]}\n\n"
         
-        cart_text += f"💳 <b>Итого: {format_price(total)}</b>"
+        cart_text += f"💳 <b>Общая сумма: {format_price(total)}</b>\n"
+        cart_text += f"📦 Товаров в корзине: {len(cart_items)}"
         
-        self.bot.send_message(chat_id, cart_text, self.keyboards.cart_management(True))
+        # Отправляем корзину с inline кнопками для каждого товара
+        keyboard = self._create_cart_keyboard(cart_items)
+        self.bot.send_message(chat_id, cart_text, keyboard)
     
     def _show_user_orders(self, chat_id: int, user_id: int):
         """Показ заказов пользователя"""
