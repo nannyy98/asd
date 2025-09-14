@@ -84,6 +84,67 @@
     </div>
 </div>
 
+<!-- Аналитика товаров -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Популярные категории
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for category in product_analytics.category_stats[:5] %}
+                <div class="d-flex align-items-center mb-3">
+                    <div class="me-3">
+                        <div class="icon-circle icon-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            {{ category[1] }}
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold">{{ category[0] }}</div>
+                        <div class="text-muted small">
+                            {{ category[2] }} товаров • {{ category[3] }} продано • ${{ "%.0f"|format(category[4]) }}
+                        </div>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar" style="width: {{ (category[4] / product_analytics.category_stats[0][4] * 100) if product_analytics.category_stats else 0 }}%"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
+                    Товары с низкой конверсией
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for product in product_analytics.low_conversion[:5] %}
+                <div class="d-flex justify-content-between align-items-center mb-3 p-2 rounded" style="background-color: #fff3cd;">
+                    <div>
+                        <div class="fw-bold">{{ product[0] }}</div>
+                        <small class="text-muted">
+                            {{ product[1] }} просмотров • {{ product[2] }} продаж
+                        </small>
+                    </div>
+                    <div class="text-end">
+                        <div class="badge bg-warning">{{ "%.1f"|format(product[3] or 0) }}%</div>
+                        <div class="small text-muted">${{ "%.0f"|format(product[4]) }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <!-- График продаж -->
     <div class="col-xl-8 col-lg-7">
@@ -99,16 +160,16 @@
             </div>
         </div>
         
-        <!-- График заказов -->
+        <!-- График активности по дням недели -->
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="fas fa-chart-bar me-2"></i>
-                    Количество заказов
+                    <i class="fas fa-calendar-week me-2"></i>
+                    Активность по дням недели
                 </h5>
             </div>
             <div class="card-body">
-                <canvas id="ordersChart" height="80"></canvas>
+                <canvas id="weeklyChart" height="80"></canvas>
             </div>
         </div>
     </div>
@@ -196,109 +257,114 @@
 {% block scripts %}
 <script>
 // График продаж
+const salesData = {{ sales_trends.daily_sales | tojson }};
+if (salesData && salesData.length > 0) {
+    const ctx = document.getElementById('salesChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: salesData.map(item => item[0]),
+            datasets: [{
+                label: 'Выручка ($)',
+                data: salesData.map(item => item[2]),
+                borderColor: '#11998e',
+                backgroundColor: 'rgba(17, 153, 142, 0.1)',
+                tension: 0.4,
+                fill: true,
+                borderWidth: 3,
+                pointBackgroundColor: '#11998e',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+} else {
+    document.getElementById('salesChart').style.display = 'none';
+}
+
+// График по дням недели
+const weeklyData = {{ sales_trends.weekly_sales | tojson }};
+if (weeklyData && weeklyData.length > 0) {
+    const ctx2 = document.getElementById('weeklyChart').getContext('2d');
+    new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: weeklyData.map(item => item[0]),
+            datasets: [{
+                label: 'Заказы',
+                data: weeklyData.map(item => item[2]),
+                backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                borderColor: '#667eea',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    },
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+} else {
+    document.getElementById('weeklyChart').style.display = 'none';
+}
+
+// Fallback для старого API
 fetch('/api/chart_data?type=sales&period={{ period }}')
     .then(response => response.json())
     .then(data => {
-        const ctx = document.getElementById('salesChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.labels,
-                datasets: [{
-                    label: 'Выручка ($)',
-                    data: data.data,
-                    borderColor: '#11998e',
-                    backgroundColor: 'rgba(17, 153, 142, 0.1)',
-                    tension: 0.4,
-                    fill: true,
-                    borderWidth: 3,
-                    pointBackgroundColor: '#11998e',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(0,0,0,0.05)'
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return '$' + value;
-                            }
-                        }
-                    }
-                }
-            }
-        });
+        // Дополнительная обработка если нужно
     })
     .catch(error => {
-        console.log('Данные графика недоступны');
-    });
-
-// График заказов
-fetch('/api/chart_data?type=orders&period={{ period }}')
-    .then(response => response.json())
-    .then(data => {
-        const ctx = document.getElementById('ordersChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: data.labels,
-                datasets: [{
-                    label: 'Заказы',
-                    data: data.data,
-                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
-                    borderColor: '#667eea',
-                    borderWidth: 2,
-                    borderRadius: 8,
-                    borderSkipped: false,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(0,0,0,0.05)'
-                        },
-                        ticks: {
-                            stepSize: 1
-                        }
-                    }
-                }
-            }
-        });
-    })
-    .catch(error => {
-        console.log('Данные графика недоступны');
     });
 
 function refreshAnalytics() {

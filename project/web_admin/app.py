@@ -69,27 +69,8 @@ def logout():
 def dashboard():
     """Главная панель"""
     try:
-        # Статистика за сегодня
-        today = datetime.now().strftime('%Y-%m-%d')
-        today_stats = db.execute_query('''
-            SELECT 
-                COUNT(*) as orders_today,
-                COALESCE(SUM(total_amount), 0) as revenue_today,
-                COUNT(DISTINCT user_id) as customers_today
-            FROM orders 
-            WHERE DATE(created_at) = ? AND status != 'cancelled'
-        ''', (today,))
-        
-        # Общая статистика
-        total_stats = db.execute_query('''
-            SELECT 
-                COUNT(DISTINCT u.id) as total_customers,
-                COUNT(o.id) as total_orders,
-                COALESCE(SUM(o.total_amount), 0) as total_revenue
-            FROM users u
-            LEFT JOIN orders o ON u.id = o.user_id AND o.status != 'cancelled'
-            WHERE u.is_admin = 0
-        ''')
+        # Получаем полную статистику
+        dashboard_stats = analytics.get_dashboard_stats()
         
         # Последние заказы
         recent_orders = db.execute_query('''
@@ -100,32 +81,24 @@ def dashboard():
             LIMIT 10
         ''')
         
-        # Топ товары
-        top_products = db.execute_query('''
-            SELECT p.name, SUM(oi.quantity) as sold, SUM(oi.quantity * oi.price) as revenue
-            FROM order_items oi
-            JOIN products p ON oi.product_id = p.id
-            JOIN orders o ON oi.order_id = o.id
-            WHERE o.created_at >= date('now', '-7 days') AND o.status != 'cancelled'
-            GROUP BY p.id, p.name
-            ORDER BY revenue DESC
-            LIMIT 5
-        ''')
+        # Получаем аналитику товаров
+        product_analytics = analytics.get_product_analytics()
+        
+        # Тренды продаж
+        sales_trends = analytics.get_sales_trends(7)
         
         return render_template('dashboard.html',
-                             today_stats=today_stats[0] if today_stats else (0, 0, 0),
-                             total_stats=total_stats[0] if total_stats else (0, 0, 0),
+                             dashboard_stats=dashboard_stats,
                              recent_orders=recent_orders or [],
-                             top_products=top_products or [])
+                             top_products=product_analytics['top_products'][:5],
+                             sales_trends=sales_trends)
                              
     except Exception as e:
         logger.error(f"Ошибка загрузки дашборда: {e}")
         flash('Ошибка загрузки данных')
         return render_template('dashboard.html',
-                             today_stats=(0, 0, 0),
-                             total_stats=(0, 0, 0),
+                             dashboard_stats={},
                              recent_orders=[],
-                             top_products=[])
 
 @app.route('/orders')
 @login_required
@@ -321,13 +294,21 @@ def analytics_page():
             end_date.strftime('%Y-%m-%d')
         )
         
-        return render_template('analytics.html', 
+        # Получаем дополнительную аналитику
+        product_analytics = analytics.get_product_analytics()
+        sales_trends = analytics.get_sales_trends(int(period))
+        
+        return render_template('analytics.html',
                              sales_report=sales_report,
+                             product_analytics=product_analytics,
+                             sales_trends=sales_trends,
                              period=period)
     except Exception as e:
         logger.error(f"Ошибка загрузки аналитики: {e}")
         return render_template('analytics.html', 
                              sales_report={'summary': (0, 0, 0, 0), 'top_products': []},
+                             product_analytics={'top_products': [], 'category_stats': []},
+                             sales_trends={'daily_sales': []},
                              period='30')
 
 @app.route('/api/chart_data')
@@ -399,6 +380,17 @@ def update_order_status():
         flash('Ошибка обновления статуса')
     
     return redirect(url_for('orders'))
+
+@app.route('/crm')
+@login_required
+def crm():
+    """CRM аналитика"""
+    try:
+        crm_data = analytics.get_crm_analytics()
+        return render_template('crm.html', **crm_data)
+    except Exception as e:
+        logger.error(f"Ошибка загрузки CRM: {e}")
+        return render_template('crm.html', segments={}, at_risk_customers=[])
 
 if __name__ == '__main__':
     app.run(debug=config.debug, host='0.0.0.0', port=5000)
