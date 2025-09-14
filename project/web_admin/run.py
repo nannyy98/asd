@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 """
-Запуск веб-панели администратора
+Запуск веб-панели администратора v2.0
 """
 
-import os
 import sys
+from pathlib import Path
 
 # Добавляем путь к модулям бота
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app import app
+from core.config import config
 
 if __name__ == '__main__':
-    # Настройки для разработки
+    print("🌐 Запуск веб-панели администратора...")
+    print(f"📱 URL: http://localhost:5000")
+    print(f"👤 Логин: {config.bot.admin_name}")
+    print(f"🔑 Пароль: admin123")
+    
     app.run(
-        debug=True,
+        debug=config.debug,
         host='0.0.0.0',
         port=5000
     )

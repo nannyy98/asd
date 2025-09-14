@@ -1,92 +1,42 @@
 {% extends "base.html" %}
 
-{% block title %}Главная - Админ-панель{% endblock %}
+{% block title %}Главная - Shop Bot Admin{% endblock %}
 {% block page_title %}Обзор магазина{% endblock %}
 
 {% block content %}
-<!-- Статистические карточки -->
-<div class="row mb-4">
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="metric-card stat-card">
-            <div class="icon-circle icon-primary text-white mx-auto">
-                <i class="fas fa-shopping-cart"></i>
-            </div>
-            <div class="text-center">
-                <h2 class="stat-number">{{ today_stats[0] }}</h2>
-                <p class="stat-label">Заказов сегодня</p>
-                {% if yesterday_stats[0] > 0 %}
-                    {% set change = ((today_stats[0] - yesterday_stats[0]) / yesterday_stats[0] * 100) %}
-                    <small class="d-block mt-2">
-                        {% if change > 0 %}
-                            <i class="fas fa-arrow-up me-1"></i>+{{ "%.1f"|format(change) }}% от вчера
-                        {% elif change < 0 %}
-                            <i class="fas fa-arrow-down me-1"></i>{{ "%.1f"|format(change) }}% от вчера
-                        {% else %}
-                            <i class="fas fa-minus me-1"></i>Без изменений
-                        {% endif %}
-                    </small>
-                {% endif %}
-            </div>
+<!-- Метрики -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card metric-card">
+            <div class="metric-number">{{ today_stats[0] }}</div>
+            <div class="metric-label">Заказов сегодня</div>
         </div>
     </div>
     
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="metric-card stat-card-success">
-            <div class="icon-circle icon-success text-white mx-auto">
-                <i class="fas fa-dollar-sign"></i>
-            </div>
-            <div class="text-center">
-                <h2 class="stat-number">${{ "%.0f"|format(today_stats[1]) }}</h2>
-                <p class="stat-label">Выручка сегодня</p>
-                {% if yesterday_stats[1] > 0 %}
-                    {% set change = ((today_stats[1] - yesterday_stats[1]) / yesterday_stats[1] * 100) %}
-                    <small class="d-block mt-2">
-                        {% if change > 0 %}
-                            <i class="fas fa-arrow-up me-1"></i>+{{ "%.1f"|format(change) }}% от вчера
-                        {% elif change < 0 %}
-                            <i class="fas fa-arrow-down me-1"></i>{{ "%.1f"|format(change) }}% от вчера
-                        {% else %}
-                            <i class="fas fa-minus me-1"></i>Без изменений
-                        {% endif %}
-                    </small>
-                {% endif %}
-            </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card metric-card success">
+            <div class="metric-number">${{ "%.0f"|format(today_stats[1]) }}</div>
+            <div class="metric-label">Выручка сегодня</div>
         </div>
     </div>
     
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="metric-card stat-card-info">
-            <div class="icon-circle icon-info text-white mx-auto">
-                <i class="fas fa-users"></i>
-            </div>
-            <div class="text-center">
-                <h2 class="stat-number">{{ total_stats[0] }}</h2>
-                <p class="stat-label">Всего клиентов</p>
-                <small class="d-block mt-2">
-                    <i class="fas fa-user-plus me-1"></i>{{ today_stats[2] }} новых сегодня
-                </small>
-            </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card metric-card info">
+            <div class="metric-number">{{ total_stats[0] }}</div>
+            <div class="metric-label">Всего клиентов</div>
         </div>
     </div>
     
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="metric-card stat-card-warning">
-            <div class="icon-circle icon-warning text-white mx-auto">
-                <i class="fas fa-chart-line"></i>
-            </div>
-            <div class="text-center">
-                <h2 class="stat-number">${{ "%.0f"|format(total_stats[2]) }}</h2>
-                <p class="stat-label">Общая выручка</p>
-                <small class="d-block mt-2">
-                    <i class="fas fa-shopping-bag me-1"></i>{{ total_stats[1] }} заказов всего
-                </small>
-            </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card metric-card warning">
+            <div class="metric-number">${{ "%.0f"|format(total_stats[2]) }}</div>
+            <div class="metric-label">Общая выручка</div>
         </div>
     </div>
 </div>
 
 <!-- Быстрые действия -->
-<div class="row mb-4">
+<div class="row g-4 mb-4">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
@@ -96,65 +46,34 @@
                 </h5>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <div class="quick-action-btn" onclick="window.location.href='{{ url_for('orders') }}'">
-                            <i class="fas fa-shopping-cart fa-2x mb-2 text-primary"></i>
-                            <div class="fw-bold">Заказы</div>
-                            <small class="text-muted">Управление заказами</small>
-                        </div>
+                <div class="row g-3">
+                    <div class="col-lg-3 col-md-6">
+                        <a href="#orders" class="quick-action">
+                            <i class="fas fa-shopping-cart text-primary"></i>
+                            <h6>Заказы</h6>
+                            <small>Управление заказами</small>
+                        </a>
                     </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <div class="quick-action-btn" onclick="window.location.href='{{ url_for('add_product') }}'">
-                            <i class="fas fa-plus-circle fa-2x mb-2 text-success"></i>
-                            <div class="fw-bold">Добавить товар</div>
-                            <small class="text-muted">Новый товар в каталог</small>
-                        </div>
+                    <div class="col-lg-3 col-md-6">
+                        <a href="#products" class="quick-action">
+                            <i class="fas fa-plus-circle text-success"></i>
+                            <h6>Добавить товар</h6>
+                            <small>Новый товар в каталог</small>
+                        </a>
                     </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <div class="quick-action-btn" onclick="window.location.href='{{ url_for('add_category') }}'">
-                            <i class="fas fa-folder-plus fa-2x mb-2 text-info"></i>
-                            <div class="fw-bold">Добавить категорию</div>
-                            <small class="text-muted">Новая категория товаров</small>
-                        </div>
+                    <div class="col-lg-3 col-md-6">
+                        <a href="#customers" class="quick-action">
+                            <i class="fas fa-users text-info"></i>
+                            <h6>Клиенты</h6>
+                            <small>База клиентов</small>
+                        </a>
                     </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <div class="quick-action-btn" onclick="window.location.href='{{ url_for('create_post') }}'">
-                            <i class="fas fa-edit fa-2x mb-2 text-warning"></i>
-                            <div class="fw-bold">Создать пост</div>
-                            <small class="text-muted">Автоматический пост</small>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <button type="button" class="quick-action-btn" onclick="testTelegramConnection()">
-                            <i class="fas fa-wifi fa-2x mb-2 text-success"></i>
-                            <div class="fw-bold">Тест Telegram</div>
-                            <small class="text-muted">Проверить связь с ботом</small>
-                        </button>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <div class="quick-action-btn" onclick="window.location.href='{{ url_for('customers') }}'">
-                            <i class="fas fa-users fa-2x mb-2 text-primary"></i>
-                            <div class="fw-bold">Клиенты</div>
-                            <small class="text-muted">База клиентов</small>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <button type="button" class="quick-action-btn" onclick="sendTestMessage()">
-                            <i class="fas fa-broadcast-tower fa-2x mb-2 text-info"></i>
-                            <div class="fw-bold">Тест канала</div>
-                            <small class="text-muted">Отправить тест в канал</small>
-                        </button>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <form method="POST" action="{{ url_for('force_reload_bot') }}" style="display: inline; width: 100%;">
-                            <button type="submit" class="quick-action-btn w-100" 
-                                    onclick="return confirm('Принудительно обновить все данные в боте?')">
-                                <i class="fas fa-refresh fa-2x mb-2 text-warning"></i>
-                                <div class="fw-bold">Синхронизация</div>
-                                <small class="text-muted">Обновить данные бота</small>
-                            </button>
-                        </form>
+                    <div class="col-lg-3 col-md-6">
+                        <a href="#analytics" class="quick-action">
+                            <i class="fas fa-chart-line text-warning"></i>
+                            <h6>Аналитика</h6>
+                            <small>Отчеты и статистика</small>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -162,10 +81,10 @@
     </div>
 </div>
 
-<div class="row">
+<div class="row g-4">
     <!-- График продаж -->
-    <div class="col-xl-8 col-lg-7">
-        <div class="card mb-4">
+    <div class="col-xl-8">
+        <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="fas fa-chart-area me-2"></i>
@@ -176,15 +95,61 @@
                 <canvas id="salesChart" height="80"></canvas>
             </div>
         </div>
-        
-        <!-- Последние заказы -->
+    </div>
+    
+    <!-- Топ товары -->
+    <div class="col-xl-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-trophy me-2"></i>
+                    Топ товары недели
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for product in top_products %}
+                <div class="d-flex align-items-center mb-3 p-3 rounded" style="background: var(--light);">
+                    <div class="me-3">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                             style="width: 40px; height: 40px; font-weight: 600;">
+                            {{ loop.index }}
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold">{{ product[0] }}</div>
+                        <div class="text-muted small">
+                            {{ product[1] }} шт. • ${{ "%.0f"|format(product[2]) }}
+                        </div>
+                        <div class="progress mt-2" style="height: 4px;">
+                            <div class="progress-bar bg-primary" 
+                                 style="width: {{ (product[2] / top_products[0][2] * 100) if top_products else 0 }}%"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                {% if not top_products %}
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-bar fa-2x text-muted mb-2"></i>
+                    <p class="text-muted">Нет данных за неделю</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Последние заказы -->
+{% if recent_orders %}
+<div class="row g-4 mt-2">
+    <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-list me-2"></i>
                     Последние заказы
                 </h5>
-                <a href="{{ url_for('orders') }}" class="btn btn-outline-primary btn-sm">
+                <a href="#orders" class="btn btn-outline-primary btn-sm">
                     Все заказы
                 </a>
             </div>
@@ -197,15 +162,14 @@
                                 <th>Клиент</th>
                                 <th>Сумма</th>
                                 <th>Статус</th>
-                                <th>Действия</th>
+                                <th>Дата</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for order in recent_orders %}
                             <tr>
                                 <td>
-                                    <div class="fw-bold">#{{ order[0] }}</div>
-                                    <small class="text-muted">{{ order[3][:16] }}</small>
+                                    <div class="fw-bold text-primary">#{{ order[0] }}</div>
                                 </td>
                                 <td>
                                     <div class="fw-bold">{{ order[4] }}</div>
@@ -224,10 +188,7 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('order_detail', order_id=order[0]) }}" 
-                                       class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
+                                    <small class="text-muted">{{ order[3][:16] }}</small>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -237,77 +198,8 @@
             </div>
         </div>
     </div>
-    
-    <!-- Боковая панель с топ товарами и статистикой -->
-    <div class="col-xl-4 col-lg-5">
-        <!-- Топ товары -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-trophy me-2"></i>
-                    Топ товары недели
-                </h5>
-            </div>
-            <div class="card-body">
-                {% for product in top_products %}
-                <div class="d-flex align-items-center mb-3 p-2 rounded" style="background-color: #f8f9fa;">
-                    <div class="me-3">
-                        <div class="icon-circle icon-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 1rem;">
-                            {{ loop.index }}
-                        </div>
-                    </div>
-                    <div class="flex-grow-1">
-                        <div class="fw-bold">{{ product[0] }}</div>
-                        <div class="text-muted small">
-                            <i class="fas fa-box me-1"></i>{{ product[1] }} шт.
-                            <i class="fas fa-dollar-sign ms-2 me-1"></i>{{ "%.0f"|format(product[2]) }}
-                        </div>
-                        <div class="progress mt-2" style="height: 4px;">
-                            <div class="progress-bar" role="progressbar" 
-                                 style="width: {{ (product[2] / top_products[0][2] * 100) if top_products else 0 }}%"></div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        
-        <!-- Быстрая статистика -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Сводка
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-6 mb-3">
-                        <div class="h3 text-primary">{{ "%.1f"|format((today_stats[1] / today_stats[0]) if today_stats[0] > 0 else 0) }}</div>
-                        <div class="text-muted small">Средний чек сегодня</div>
-                    </div>
-                    <div class="col-6 mb-3">
-                        <div class="h3 text-success">{{ "%.1f"|format((today_stats[0] / yesterday_stats[0] * 100) if yesterday_stats[0] > 0 else 0) }}%</div>
-                        <div class="text-muted small">Рост заказов</div>
-                    </div>
-                </div>
-                
-                <hr>
-                
-                <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshDashboard()">
-                        <i class="fas fa-sync-alt me-1"></i>
-                        Обновить данные
-                    </button>
-                    <a href="{{ url_for('analytics_page') }}" class="btn btn-outline-success btn-sm">
-                        <i class="fas fa-download me-1"></i>
-                        Скачать отчет
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -317,6 +209,12 @@ fetch('/api/chart_data?type=sales&period=30')
     .then(response => response.json())
     .then(data => {
         const ctx = document.getElementById('salesChart').getContext('2d');
+        
+        // Создаем градиент
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.3)');
+        gradient.addColorStop(1, 'rgba(99, 102, 241, 0.05)');
+        
         new Chart(ctx, {
             type: 'line',
             data: {
@@ -324,15 +222,16 @@ fetch('/api/chart_data?type=sales&period=30')
                 datasets: [{
                     label: 'Выручка ($)',
                     data: data.data,
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderColor: '#6366f1',
+                    backgroundColor: gradient,
                     tension: 0.4,
                     fill: true,
                     borderWidth: 3,
-                    pointBackgroundColor: '#667eea',
+                    pointBackgroundColor: '#6366f1',
                     pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointRadius: 6
+                    pointBorderWidth: 3,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
                 }]
             },
             options: {
@@ -347,6 +246,9 @@ fetch('/api/chart_data?type=sales&period=30')
                     x: {
                         grid: {
                             display: false
+                        },
+                        ticks: {
+                            color: '#6b7280'
                         }
                     },
                     y: {
@@ -355,67 +257,23 @@ fetch('/api/chart_data?type=sales&period=30')
                             color: 'rgba(0,0,0,0.05)'
                         },
                         ticks: {
+                            color: '#6b7280',
                             callback: function(value) {
                                 return '$' + value;
                             }
                         }
                     }
                 },
-                elements: {
-                    point: {
-                        hoverRadius: 8
-                    }
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
                 }
             }
         });
     })
     .catch(error => {
-        console.log('Ошибка загрузки данных графика:', error);
+        console.log('Данные графика недоступны');
         document.getElementById('salesChart').style.display = 'none';
     });
-
-function refreshDashboard() {
-    const button = event.target;
-    showLoading(button);
-    setTimeout(() => {
-        location.reload();
-    }, 1000);
-}
-
-function testTelegramConnection() {
-    fetch('/api/test_telegram')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('✅ Связь с Telegram работает!\n\nБот: ' + data.bot_name);
-            } else {
-                alert('❌ Ошибка связи с Telegram:\n' + data.error);
-            }
-        })
-        .catch(error => {
-            alert('❌ Ошибка проверки связи');
-        });
-}
-
-function sendTestMessage() {
-    if (confirm('Отправить тестовое сообщение с изображением в канал?')) {
-        fetch('/test_channel_post', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                alert('✅ Тестовое сообщение отправлено в канал!');
-            } else {
-                alert('❌ Ошибка отправки тестового сообщения');
-            }
-        })
-        .catch(error => {
-            alert('❌ Ошибка отправки');
-        });
-    }
-}
 </script>
 {% endblock %}
