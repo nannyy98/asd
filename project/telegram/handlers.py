@@ -3,6 +3,8 @@
 """
 
 from typing import Dict, Any, Optional, List
+import os
+from pathlib import Path
 from core.logger import logger
 from core.utils import format_price, calculate_cart_total, sanitize_text
 from core.exceptions import ValidationError
@@ -16,10 +18,29 @@ class MessageHandler:
         self.db = db
         self.user_states = {}
         self.keyboards = KeyboardBuilder()
+        self.data_update_flag_file = Path(__file__).parent.parent / 'data_update_flag.txt'
+        self.last_data_check = 0
+    
+    def check_data_updates(self):
+        """Проверка обновлений данных из веб-панели"""
+        try:
+            if self.data_update_flag_file.exists():
+                file_time = self.data_update_flag_file.stat().st_mtime
+                if file_time > self.last_data_check:
+                    self.last_data_check = file_time
+                    # Очищаем кэш категорий и товаров если есть
+                    logger.info("Данные обновлены из веб-панели")
+                    return True
+        except Exception as e:
+            logger.error(f"Ошибка проверки обновлений: {e}")
+        return False
     
     def handle_message(self, message: Dict[str, Any]):
         """Основной обработчик сообщений"""
         try:
+            # Проверяем обновления данных
+            self.check_data_updates()
+            
             chat_id = message['chat']['id']
             telegram_id = message['from']['id']
             text = message.get('text', '')
@@ -401,6 +422,9 @@ class MessageHandler:
     
     def _show_catalog(self, chat_id: int):
         """Показ каталога"""
+        # Проверяем обновления перед показом каталога
+        self.check_data_updates()
+        
         categories = self.db.get_categories()
         
         if not categories:

@@ -17,6 +17,7 @@ if __name__ == '__main__':
     print(f"📱 URL: http://localhost:5000")
     print(f"👤 Логин: {config.bot.admin_name}")
     print(f"🔑 Пароль: admin123")
+    print("🔗 Интеграция с Telegram ботом активна")
     
     app.run(
         debug=config.debug,

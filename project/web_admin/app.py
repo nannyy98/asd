@@ -16,6 +16,7 @@ from core.config import config
 from core.logger import logger
 from database.manager import DatabaseManager
 from services.analytics_service import AnalyticsService
+from bot_integration import telegram_bot
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'change-in-production')
@@ -380,6 +381,275 @@ def update_order_status():
         flash('Ошибка обновления статуса')
     
     return redirect(url_for('orders'))
+
+@app.route('/add_category', methods=['GET', 'POST'])
+@login_required
+def add_category():
+    """Добавление новой категории"""
+    if request.method == 'POST':
+        try:
+            name = request.form['name'].strip()
+            description = request.form.get('description', '').strip()
+            emoji = request.form.get('emoji', '📦').strip()
+            
+            if not name:
+                flash('Название категории обязательно')
+                return render_template('add_category.html')
+            
+            # Добавляем в базу данных
+            category_id = db.execute_query('''
+                INSERT INTO categories (name, description, emoji, is_active)
+                VALUES (?, ?, ?, 1)
+            ''', (name, description, emoji))
+            
+            if category_id:
+                flash(f'Категория "{name}" успешно добавлена')
+                
+                # Уведомляем в Telegram канал
+                telegram_bot.send_to_channel(f'''
+🆕 <b>Новая категория добавлена!</b>
+
+{emoji} <b>{name}</b>
+{description}
+
+🛍 Переходите в каталог бота!
+                ''')
+                
+                return redirect(url_for('categories'))
+            else:
+                flash('Ошибка добавления категории')
+                
+        except Exception as e:
+            logger.error(f"Ошибка добавления категории: {e}")
+            flash('Ошибка добавления категории')
+    
+    return render_template('add_category.html')
+
+@app.route('/edit_category', methods=['POST'])
+@login_required
+def edit_category():
+    """Редактирование категории"""
+    try:
+        category_id = request.form['category_id']
+        name = request.form['name'].strip()
+        description = request.form.get('description', '').strip()
+        emoji = request.form.get('emoji', '📦').strip()
+        
+        db.execute_query('''
+            UPDATE categories 
+            SET name = ?, description = ?, emoji = ?
+            WHERE id = ?
+        ''', (name, description, emoji, category_id))
+        
+        flash(f'Категория "{name}" обновлена')
+        
+    except Exception as e:
+        logger.error(f"Ошибка редактирования категории: {e}")
+        flash('Ошибка редактирования категории')
+    
+    return redirect(url_for('categories'))
+
+@app.route('/toggle_category_status', methods=['POST'])
+@login_required
+def toggle_category_status():
+    """Переключение статуса категории"""
+    try:
+        category_id = request.form['category_id']
+        current_status = request.form['current_status'] == 'True'
+        new_status = not current_status
+        
+        db.execute_query('''
+            UPDATE categories SET is_active = ? WHERE id = ?
+        ''', (new_status, category_id))
+        
+        status_text = "активирована" if new_status else "деактивирована"
+        flash(f'Категория {status_text}')
+        
+    except Exception as e:
+        logger.error(f"Ошибка изменения статуса категории: {e}")
+        flash('Ошибка изменения статуса')
+    
+    return redirect(url_for('categories'))
+
+@app.route('/delete_category', methods=['POST'])
+@login_required
+def delete_category():
+    """Удаление категории"""
+    try:
+        category_id = request.form['category_id']
+        
+        # Получаем название категории
+        category = db.execute_query('SELECT name FROM categories WHERE id = ?', (category_id,))
+        category_name = category[0][0] if category else "Категория"
+        
+        # Удаляем все товары в категории
+        db.execute_query('DELETE FROM products WHERE category_id = ?', (category_id,))
+        
+        # Удаляем категорию
+        db.execute_query('DELETE FROM categories WHERE id = ?', (category_id,))
+        
+        flash(f'Категория "{category_name}" и все товары в ней удалены')
+        
+        # Уведомляем об обновлении
+        telegram_bot.trigger_bot_data_reload()
+        
+    except Exception as e:
+        logger.error(f"Ошибка удаления категории: {e}")
+        flash('Ошибка удаления категории')
+    
+    return redirect(url_for('categories'))
+
+@app.route('/add_product', methods=['GET', 'POST'])
+@login_required
+def add_product():
+    """Добавление нового товара"""
+    if request.method == 'POST':
+        try:
+            name = request.form['name'].strip()
+            description = request.form.get('description', '').strip()
+            price = float(request.form['price'])
+            cost_price = float(request.form.get('cost_price', 0))
+            category_id = int(request.form['category_id'])
+            stock = int(request.form['stock'])
+            image_url = request.form.get('image_url', '').strip()
+            
+            if not name or price <= 0 or stock < 0:
+                flash('Проверьте корректность данных')
+                return render_template('add_product.html', categories=db.get_categories())
+            
+            # Добавляем товар
+            product_id = db.execute_query('''
+                INSERT INTO products (name, description, price, cost_price, category_id, stock, image_url, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+            ''', (name, description, price, cost_price, category_id, stock, image_url))
+            
+            if product_id:
+                flash(f'Товар "{name}" успешно добавлен')
+                
+                # Получаем название категории
+                category = db.execute_query('SELECT name, emoji FROM categories WHERE id = ?', (category_id,))
+                category_name = f"{category[0][1]} {category[0][0]}" if category else "Товары"
+                
+                # Уведомляем в Telegram канал
+                message = f'''
+🆕 <b>Новый товар в каталоге!</b>
+
+🛍 <b>{name}</b>
+📂 Категория: {category_name}
+💰 Цена: <b>${price:.2f}</b>
+📦 В наличии: {stock} шт.
+
+{description}
+
+🛒 Заказывайте в боте: /start
+                '''
+                
+                if image_url:
+                    telegram_bot.send_photo_to_channel(image_url, message)
+                else:
+                    telegram_bot.send_to_channel(message)
+                
+                return redirect(url_for('products'))
+            else:
+                flash('Ошибка добавления товара')
+                
+        except Exception as e:
+            logger.error(f"Ошибка добавления товара: {e}")
+            flash('Ошибка добавления товара')
+    
+    categories = db.get_categories()
+    return render_template('add_product.html', categories=categories)
+
+@app.route('/toggle_product_status', methods=['POST'])
+@login_required
+def toggle_product_status():
+    """Переключение статуса товара"""
+    try:
+        product_id = request.form['product_id']
+        current_status = request.form['current_status'] == 'True'
+        new_status = not current_status
+        
+        db.execute_query('''
+            UPDATE products SET is_active = ? WHERE id = ?
+        ''', (new_status, product_id))
+        
+        status_text = "активирован" if new_status else "скрыт"
+        flash(f'Товар {status_text}')
+        
+    except Exception as e:
+        logger.error(f"Ошибка изменения статуса товара: {e}")
+        flash('Ошибка изменения статуса')
+    
+    return redirect(url_for('products'))
+
+@app.route('/delete_product', methods=['POST'])
+@login_required
+def delete_product():
+    """Удаление товара"""
+    try:
+        product_id = request.form['product_id']
+        
+        # Получаем название товара для уведомления
+        product = db.execute_query('SELECT name FROM products WHERE id = ?', (product_id,))
+        product_name = product[0][0] if product else "Товар"
+        
+        # Удаляем товар
+        db.execute_query('DELETE FROM products WHERE id = ?', (product_id,))
+        
+        flash(f'Товар "{product_name}" удален')
+        
+    except Exception as e:
+        logger.error(f"Ошибка удаления товара: {e}")
+        flash('Ошибка удаления товара')
+    
+    return redirect(url_for('products'))
+
+@app.route('/notify_new_product', methods=['POST'])
+@login_required
+def notify_new_product():
+    """Уведомление о товаре в канал"""
+    try:
+        product_id = request.form['product_id']
+        
+        # Получаем данные товара
+        product = db.execute_query('''
+            SELECT p.name, p.description, p.price, p.stock, p.image_url, c.name, c.emoji
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.id = ?
+        ''', (product_id,))
+        
+        if product:
+            p = product[0]
+            category_name = f"{p[6]} {p[5]}" if p[5] else "Товары"
+            
+            message = f'''
+🔥 <b>Рекомендуем товар!</b>
+
+🛍 <b>{p[0]}</b>
+📂 {category_name}
+💰 Цена: <b>${p[2]:.2f}</b>
+📦 В наличии: {p[3]} шт.
+
+{p[1]}
+
+🛒 Заказать: /start
+            '''
+            
+            if p[4]:  # Если есть изображение
+                telegram_bot.send_photo_to_channel(p[4], message)
+            else:
+                telegram_bot.send_to_channel(message)
+            
+            flash('Уведомление отправлено в канал')
+        else:
+            flash('Товар не найден')
+            
+    except Exception as e:
+        logger.error(f"Ошибка отправки уведомления: {e}")
+        flash('Ошибка отправки уведомления')
+    
+    return redirect(url_for('products'))
 
 @app.route('/crm')
 @login_required

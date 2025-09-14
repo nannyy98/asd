@@ -21,14 +21,33 @@ class TelegramBotIntegration:
         
         self.base_url = f"https://api.telegram.org/bot{self.token}"
         self.channel_id = "-1002566537425"
+        
+        # Добавляем уведомление о запуске веб-панели
+        self.notify_web_panel_start()
+    
+    def notify_web_panel_start(self):
+        """Уведомление о запуске веб-панели"""
+        try:
+            message = '''
+🌐 <b>Веб-панель администратора запущена!</b>
+
+✅ Система управления активна
+📊 Аналитика обновляется в реальном времени
+🛍 Можно добавлять товары и категории
+
+🔗 Панель доступна по адресу: http://localhost:5000
+            '''
+            self.send_to_channel(message)
+        except Exception as e:
+            print(f"Ошибка уведомления о запуске: {e}")
     
     def trigger_bot_data_reload(self):
         """Сигнал боту о необходимости перезагрузки данных"""
         try:
             # Создаем файл-флаг для бота
-            update_flag_file = '../data_update_flag.txt'
+            update_flag_file = os.path.join(os.path.dirname(__file__), '..', 'data_update_flag.txt')
             with open(update_flag_file, 'w') as f:
-                f.write(str(time.time()))
+                f.write(str(datetime.now().timestamp()))
             return True
         except Exception as e:
             print(f"Ошибка создания флага обновления: {e}")
