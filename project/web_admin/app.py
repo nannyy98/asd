@@ -3,6 +3,7 @@
 Современная, безопасная и красивая панель управления
 """
 
+from functools import wraps
 import os
 import sys
 from pathlib import Path
@@ -32,11 +33,11 @@ def inject_config():
 
 def login_required(f):
     """Декоратор для проверки авторизации"""
+    @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('logged_in'):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
-    decorated_function.__name__ = f.__name__
     return decorated_function
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -100,6 +101,8 @@ def dashboard():
         return render_template('dashboard.html',
                              dashboard_stats={},
                              recent_orders=[],
+                             top_products=[],
+                             sales_trends={})
 
 @app.route('/orders')
 @login_required
@@ -130,7 +133,12 @@ def order_detail(order_id):
             return redirect(url_for('orders'))
         
         # Получаем информацию о клиенте
-        user_id = order_data['order'][1]
+        if 'order' in order_data and len(order_data['order']) > 1:
+            user_id = order_data['order'][1]
+        else:
+            flash('Некорректные данные заказа')
+            return redirect(url_for('orders'))
+            
         customer_info = db.execute_query(
             'SELECT name, phone, email, created_at FROM users WHERE id = ?',
             (user_id,)
@@ -280,6 +288,9 @@ def export_customers():
         return response
         
     except Exception as e:
+        logger.error(f"Ошибка экспорта клиентов: {e}")
+        flash('Ошибка экспорта клиентов')
+        return redirect(url_for('customers'))
 
 @app.route('/analytics')
 @login_required
@@ -370,8 +381,19 @@ def chart_data():
 def update_order_status():
     """Обновление статуса заказа"""
     try:
-        order_id = request.form['order_id']
+        try:
+            order_id = int(request.form['order_id'])
+        except (ValueError, TypeError):
+            flash('Некорректный ID заказа')
+            return redirect(url_for('orders'))
+            
         status = request.form['status']
+        
+        # Валидация статуса
+        valid_statuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
+        if status not in valid_statuses:
+            flash('Некорректный статус заказа')
+            return redirect(url_for('orders'))
         
         db.update_order_status(order_id, status)
         flash(f'Статус заказа #{order_id} обновлен')
@@ -396,6 +418,15 @@ def add_category():
                 flash('Название категории обязательно')
                 return render_template('add_category.html')
             
+            # Проверяем уникальность названия
+            existing = db.execute_query(
+                'SELECT id FROM categories WHERE name = ?',
+                (name,)
+            )
+            if existing:
+                flash('Категория с таким названием уже существует')
+                return render_template('add_category.html')
+            
             # Добавляем в базу данных
             category_id = db.execute_query('''
                 INSERT INTO categories (name, description, emoji, is_active)
@@ -406,14 +437,17 @@ def add_category():
                 flash(f'Категория "{name}" успешно добавлена')
                 
                 # Уведомляем в Telegram канал
-                telegram_bot.send_to_channel(f'''
+                try:
+                    telegram_bot.send_to_channel(f'''
 🆕 <b>Новая категория добавлена!</b>
 
 {emoji} <b>{name}</b>
 {description}
 
 🛍 Переходите в каталог бота!
-                ''')
+                    ''')
+                except Exception as e:
+                    logger.error(f"Ошибка отправки уведомления: {e}")
                 
                 return redirect(url_for('categories'))
             else:
@@ -430,10 +464,19 @@ def add_category():
 def edit_category():
     """Редактирование категории"""
     try:
-        category_id = request.form['category_id']
+        try:
+            category_id = int(request.form['category_id'])
+        except (ValueError, TypeError):
+            flash('Некорректный ID категории')
+            return redirect(url_for('categories'))
+            
         name = request.form['name'].strip()
         description = request.form.get('description', '').strip()
         emoji = request.form.get('emoji', '📦').strip()
+        
+        if not name:
+            flash('Название категории обязательно')
+            return redirect(url_for('categories'))
         
         db.execute_query('''
             UPDATE categories 
@@ -454,7 +497,12 @@ def edit_category():
 def toggle_category_status():
     """Переключение статуса категории"""
     try:
-        category_id = request.form['category_id']
+        try:
+            category_id = int(request.form['category_id'])
+        except (ValueError, TypeError):
+            flash('Некорректный ID категории')
+            return redirect(url_for('categories'))
+            
         current_status = request.form['current_status'] == 'True'
         new_status = not current_status
         
@@ -476,7 +524,11 @@ def toggle_category_status():
 def delete_category():
     """Удаление категории"""
     try:
-        category_id = request.form['category_id']
+        try:
+            category_id = int(request.form['category_id'])
+        except (ValueError, TypeError):
+            flash('Некорректный ID категории')
+            return redirect(url_for('categories'))
         
         # Получаем название категории
         category = db.execute_query('SELECT name FROM categories WHERE id = ?', (category_id,))
@@ -491,7 +543,10 @@ def delete_category():
         flash(f'Категория "{category_name}" и все товары в ней удалены')
         
         # Уведомляем об обновлении
-        telegram_bot.trigger_bot_data_reload()
+        try:
+            telegram_bot.trigger_bot_data_reload()
+        except Exception as e:
+            logger.error(f"Ошибка обновления бота: {e}")
         
     except Exception as e:
         logger.error(f"Ошибка удаления категории: {e}")
@@ -507,13 +562,49 @@ def add_product():
         try:
             name = request.form['name'].strip()
             description = request.form.get('description', '').strip()
-            price = float(request.form['price'])
-            cost_price = float(request.form.get('cost_price', 0))
-            category_id = int(request.form['category_id'])
-            stock = int(request.form['stock'])
+            
+            # Валидация числовых данных
+            try:
+                price = float(request.form['price'])
+                if price <= 0:
+                    raise ValueError("Цена должна быть больше 0")
+            except (ValueError, TypeError):
+                flash('Некорректная цена товара')
+                return render_template('add_product.html', categories=db.get_categories())
+            
+            try:
+                cost_price = float(request.form.get('cost_price', 0))
+                if cost_price < 0:
+                    raise ValueError("Себестоимость не может быть отрицательной")
+            except (ValueError, TypeError):
+                cost_price = 0
+            
+            try:
+                category_id = int(request.form['category_id'])
+            except (ValueError, TypeError):
+                flash('Выберите корректную категорию')
+                return render_template('add_product.html', categories=db.get_categories())
+            
+            try:
+                stock = int(request.form['stock'])
+                if stock < 0:
+                    raise ValueError("Количество не может быть отрицательным")
+            except (ValueError, TypeError):
+                flash('Некорректное количество товара')
+                return render_template('add_product.html', categories=db.get_categories())
+            
             image_url = request.form.get('image_url', '').strip()
             
-            if not name or price <= 0 or stock < 0:
+            if not name:
+                flash('Название товара обязательно')
+                return render_template('add_product.html', categories=db.get_categories())
+            
+            # Проверяем существование категории
+            category_exists = db.execute_query(
+                'SELECT id FROM categories WHERE id = ? AND is_active = 1',
+                (category_id,)
+            )
+            if not category_exists:
                 flash('Проверьте корректность данных')
                 return render_template('add_product.html', categories=db.get_categories())
             
@@ -565,7 +656,12 @@ def add_product():
 def toggle_product_status():
     """Переключение статуса товара"""
     try:
-        product_id = request.form['product_id']
+        try:
+            product_id = int(request.form['product_id'])
+        except (ValueError, TypeError):
+            flash('Некорректный ID товара')
+            return redirect(url_for('products'))
+            
         current_status = request.form['current_status'] == 'True'
         new_status = not current_status
         
@@ -587,7 +683,11 @@ def toggle_product_status():
 def delete_product():
     """Удаление товара"""
     try:
-        product_id = request.form['product_id']
+        try:
+            product_id = int(request.form['product_id'])
+        except (ValueError, TypeError):
+            flash('Некорректный ID товара')
+            return redirect(url_for('products'))
         
         # Получаем название товара для уведомления
         product = db.execute_query('SELECT name FROM products WHERE id = ?', (product_id,))
@@ -609,7 +709,11 @@ def delete_product():
 def notify_new_product():
     """Уведомление о товаре в канал"""
     try:
-        product_id = request.form['product_id']
+        try:
+            product_id = int(request.form['product_id'])
+        except (ValueError, TypeError):
+            flash('Некорректный ID товара')
+            return redirect(url_for('products'))
         
         # Получаем данные товара
         product = db.execute_query('''
@@ -636,10 +740,13 @@ def notify_new_product():
 🛒 Заказать: /start
             '''
             
-            if p[4]:  # Если есть изображение
-                telegram_bot.send_photo_to_channel(p[4], message)
-            else:
-                telegram_bot.send_to_channel(message)
+            try:
+                if p[4]:  # Если есть изображение
+                    telegram_bot.send_photo_to_channel(p[4], message)
+                else:
+                    telegram_bot.send_to_channel(message)
+            except Exception as e:
+                logger.error(f"Ошибка отправки в канал: {e}")
             
             flash('Уведомление отправлено в канал')
         else:
