@@ -132,12 +132,13 @@ def order_detail(order_id):
             flash('Заказ не найден')
             return redirect(url_for('orders'))
         
-        # Получаем информацию о клиенте
-        if 'order' in order_data and len(order_data['order']) > 1:
-            user_id = order_data['order'][1]
-        else:
+        # Получаем информацию о клиенте - исправлена логика получения user_id
+        order = order_data.get('order')
+        if not order or len(order) < 2:
             flash('Некорректные данные заказа')
             return redirect(url_for('orders'))
+        
+        user_id = order[1]
             
         customer_info = db.execute_query(
             'SELECT name, phone, email, created_at FROM users WHERE id = ?',
@@ -220,9 +221,22 @@ def customers():
             ''', (per_page, offset))
         
         # Подсчет общего количества для пагинации
-        total_count = db.execute_query('''
-            SELECT COUNT(*) FROM users WHERE is_admin = 0
-        ''')[0][0] if db.execute_query('SELECT COUNT(*) FROM users WHERE is_admin = 0') else 0
+        # Исправлена логика подсчета - убран дублированный запрос
+        if search:
+            count_result = db.execute_query('''
+                SELECT COUNT(*) FROM users 
+                WHERE is_admin = 0 AND (
+                    name LIKE ? OR 
+                    phone LIKE ? OR 
+                    email LIKE ?
+                )
+            ''', (f'%{search}%', f'%{search}%', f'%{search}%'))
+        else:
+            count_result = db.execute_query('''
+                SELECT COUNT(*) FROM users WHERE is_admin = 0
+            ''')
+        
+        total_count = count_result[0][0] if count_result else 0
         
         total_pages = (total_count + per_page - 1) // per_page
         
@@ -605,7 +619,7 @@ def add_product():
                 (category_id,)
             )
             if not category_exists:
-                flash('Проверьте корректность данных')
+                flash('Выбранная категория не существует или неактивна')
                 return render_template('add_product.html', categories=db.get_categories())
             
             # Добавляем товар
@@ -635,10 +649,15 @@ def add_product():
 🛒 Заказывайте в боте: /start
                 '''
                 
-                if image_url:
-                    telegram_bot.send_photo_to_channel(image_url, message)
-                else:
-                    telegram_bot.send_to_channel(message)
+                # Исправлена логика отправки уведомлений - добавлена обработка ошибок
+                try:
+                    if image_url:
+                        telegram_bot.send_photo_to_channel(image_url, message)
+                    else:
+                        telegram_bot.send_to_channel(message)
+                except Exception as e:
+                    logger.error(f"Ошибка отправки уведомления в канал: {e}")
+                    # Не показываем ошибку пользователю, товар уже добавлен
                 
                 return redirect(url_for('products'))
             else:
@@ -745,10 +764,11 @@ def notify_new_product():
                     telegram_bot.send_photo_to_channel(p[4], message)
                 else:
                     telegram_bot.send_to_channel(message)
+                
+                flash('Уведомление отправлено в канал')
             except Exception as e:
                 logger.error(f"Ошибка отправки в канал: {e}")
-            
-            flash('Уведомление отправлено в канал')
+                flash('Ошибка отправки в канал, но товар найден')
         else:
             flash('Товар не найден')
             
