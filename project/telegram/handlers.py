@@ -693,8 +693,33 @@ class MessageHandler:
     def _validate_email(self, email: str) -> bool:
         """Валидация email"""
         import re
+        if not email or len(email) < 5:
+            return False
         pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         return bool(re.match(pattern, email))
+    
+    def _validate_phone(self, phone: str) -> bool:
+        """Валидация номера телефона"""
+        import re
+        if not phone:
+            return False
+        
+        # Убираем все кроме цифр и +
+        clean_phone = re.sub(r'[^\d+]', '', phone)
+        
+        # Проверяем различные форматы
+        patterns = [
+            r'^\+998\d{9}$',      # +998901234567
+            r'^998\d{9}$',        # 998901234567
+            r'^\d{9}$',           # 901234567
+            r'^\+\d{10,15}$',     # Международный формат
+        ]
+        
+        for pattern in patterns:
+            if re.match(pattern, clean_phone):
+                return True
+        
+        return False
     
     def _get_status_emoji(self, status: str) -> str:
         """Получение эмодзи для статуса"""
