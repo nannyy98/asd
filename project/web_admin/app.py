@@ -150,35 +150,22 @@ def orders():
 def order_detail(order_id):
     """Детали заказа"""
     try:
-        # Получаем заказ
-        order_data = db.execute_query('''
-            SELECT o.id, o.user_id, o.total_amount, o.status, o.delivery_address, 
-                   o.payment_method, o.promo_discount, o.created_at,
-                   u.name, u.phone, u.email
-            FROM orders o
-            JOIN users u ON o.user_id = u.id
-            WHERE o.id = ?
-        ''', (order_id,))
-        
+        order_data = db.get_order_details(order_id)
         if not order_data:
             flash('Заказ не найден')
             return redirect(url_for('orders'))
         
-        # Получаем товары заказа
-        order_items = db.execute_query('''
-            SELECT oi.quantity, oi.price, p.name, p.image_url
-            FROM order_items oi
-            JOIN products p ON oi.product_id = p.id
-            WHERE oi.order_id = ?
-        ''', (order_id,))
+        # Получаем информацию о клиенте
+        user_id = order_data['order'][1]
+        customer_info = db.execute_query(
+            'SELECT name, phone, email, created_at FROM users WHERE id = ?',
+            (user_id,)
+        )
+        customer_info = customer_info[0] if customer_info else None
         
-        order_detail_data = {
-            'order': order_data[0],
-            'items': order_items or []
-        }
-        
-        return render_template('order_detail.html', order_data=order_detail_data, db=db)
-        
+        return render_template('order_detail.html', 
+                             order_data=order_data,
+                             customer_info=customer_info)
     except Exception as e:
         logger.error(f"Ошибка загрузки деталей заказа: {e}")
         flash('Ошибка загрузки заказа')
