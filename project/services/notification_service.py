@@ -101,8 +101,6 @@ class NotificationService:
                 logger.info(f"Уведомление отправлено пользователю {telegram_id}")
             else:
                 raise NotificationError("Failed to send message")
-                except Exception as e:
-                    logger.error(f"Ошибка отправки уведомления: {e}")
                 
         except Exception as e:
             notification['attempts'] += 1
