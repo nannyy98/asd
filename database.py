@@ -1,4 +1,3 @@
-@@ .. @@
         # Товары
         cursor.execute('''
 CREATE TABLE IF NOT EXISTS products (
