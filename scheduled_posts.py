@@ -1,5 +1,5 @@
 """
-Улучшенная система автоматических постов для телеграм-бота
+Система постов для телеграм-бота (только ручное управление)
 """
 
 import threading
@@ -8,14 +8,14 @@ from datetime import datetime
 from utils import format_date
 from logger import logger
 
-class AutoPostsManager:
+class ScheduledPostsManager:
     def __init__(self, bot, db):
         self.bot = bot
         self.db = db
-        self.scheduler_running = False
         self.channel_id = "-1002566537425"  # ID канала для постов
         self.post_templates = self.load_post_templates()
-        self.start_scheduler()
+        # НЕ запускаем автоматический планировщик
+        logger.info("✅ Система постов инициализирована (только ручное управление)")
     
     def load_post_templates(self):
         """Загрузка шаблонов постов"""
@@ -32,8 +32,7 @@ class AutoPostsManager:
 • Быстрая доставка
 
 💫 Желаем продуктивного дня!''',
-                'image': 'https://images.pexels.com/photos/1002703/pexels-photo-1002703.jpeg',
-                'time': '09:00'
+                'image': 'https://images.pexels.com/photos/1002703/pexels-photo-1002703.jpeg'
             },
             
             'afternoon_promo': {
@@ -47,8 +46,7 @@ class AutoPostsManager:
 
 ⏰ Предложения действуют до конца дня!
 🛒 Не упустите возможность!''',
-                'image': 'https://images.pexels.com/photos/1303081/pexels-photo-1303081.jpeg',
-                'time': '14:00'
+                'image': 'https://images.pexels.com/photos/1303081/pexels-photo-1303081.jpeg'
             },
             
             'evening_recommendations': {
@@ -65,8 +63,7 @@ class AutoPostsManager:
 • Дополнительную скидку 5%
 
 🌙 Приятного вечера и удачных покупок!''',
-                'image': 'https://images.pexels.com/photos/230544/pexels-photo-230544.jpeg',
-                'time': '19:00'
+                'image': 'https://images.pexels.com/photos/230544/pexels-photo-230544.jpeg'
             },
             
             'special_promotion': {
@@ -82,8 +79,7 @@ class AutoPostsManager:
 🛍 Количество товаров ограничено!
 
 💰 Экономьте до $200 на покупках!''',
-                'image': 'https://images.pexels.com/photos/1464625/pexels-photo-1464625.jpeg',
-                'time': '16:00'
+                'image': 'https://images.pexels.com/photos/1464625/pexels-photo-1464625.jpeg'
             },
             
             'weekend_sale': {
@@ -101,8 +97,7 @@ class AutoPostsManager:
 • Товары для дома -35%
 
 ⏰ До воскресенья включительно!''',
-                'image': 'https://images.pexels.com/photos/1464625/pexels-photo-1464625.jpeg',
-                'time': '11:00'
+                'image': 'https://images.pexels.com/photos/1464625/pexels-photo-1464625.jpeg'
             },
             
             'new_arrivals': {
@@ -117,54 +112,57 @@ class AutoPostsManager:
 🎁 <b>Для первых покупателей:</b>
 • Скидка 15% на новинки
 • Приоритетная доставка
-• Гарантия лучшей цены
+• Гарантия качества
 
-🚀 Будьте в тренде с нашими новинками!''',
-                'image': 'https://images.pexels.com/photos/1464625/pexels-photo-1464625.jpeg',
-                'time': '12:00'
+🚀 Будьте первыми, кто оценит новинку!''',
+                'image': 'https://images.pexels.com/photos/1464625/pexels-photo-1464625.jpeg'
+            },
+            
+            'flash_sale': {
+                'title': 'Флеш-распродажа! ⚡',
+                'content': '''⚡ <b>ФЛЕШ-РАСПРОДАЖА!</b>
+
+🔥 <b>ТОЛЬКО 24 ЧАСА:</b>
+• Скидка 30% на ВСЕ товары
+• Промокод: FLASH30
+• Количество ограничено!
+
+⏰ <b>Торопитесь!</b>
+До конца акции осталось мало времени!
+
+💨 Самые быстрые получат лучшие товары!
+🛒 Заказывайте прямо сейчас!''',
+                'image': 'https://images.pexels.com/photos/1464625/pexels-photo-1464625.jpeg'
+            },
+            
+            'birthday_greeting': {
+                'title': 'С Днем Рождения! 🎂',
+                'content': '''🎂 <b>С ДНЕМ РОЖДЕНИЯ!</b>
+
+🎉 Сегодня особенный день!
+
+🎁 <b>Праздничные подарки:</b>
+• Скидка 20% на все товары
+• Промокод: BIRTHDAY20
+• Бесплатная доставка
+• Подарочная упаковка
+
+🥳 Пусть этот день будет наполнен радостью!
+
+💝 Выберите себе подарок в нашем каталоге!''',
+                'image': 'https://images.pexels.com/photos/1464625/pexels-photo-1464625.jpeg'
             }
         }
     
-    def start_scheduler(self):
-        """Запуск планировщика постов"""
-        if self.scheduler_running:
-            return
-        
-        def scheduler_worker():
-            while True:
-                try:
-                    current_time = datetime.now().strftime('%H:%M')
-                    
-                    # Проверяем время для автопостов
-                    if current_time == '09:00':
-                        self.send_auto_post('morning_greeting')
-                        time.sleep(60)  # Ждем минуту чтобы не отправить дважды
-                    elif current_time == '14:00':
-                        self.send_auto_post('afternoon_promo')
-                        time.sleep(60)
-                    elif current_time == '19:00':
-                        self.send_auto_post('evening_recommendations')
-                        time.sleep(60)
-                    
-                    time.sleep(30)  # Проверяем каждые 30 секунд
-                except Exception as e:
-                    logger.error(f"Ошибка планировщика постов: {e}")
-                    time.sleep(300)  # При ошибке ждем 5 минут
-        
-        scheduler_thread = threading.Thread(target=scheduler_worker, daemon=True)
-        scheduler_thread.start()
-        self.scheduler_running = True
-        logger.info("✅ Планировщик автопостов запущен (3 раза в день: 09:00, 14:00, 19:00)")
-    
-    def send_auto_post(self, template_key):
-        """Отправка автоматического поста"""
+    def send_template_post(self, template_key):
+        """Отправка поста по шаблону (ТОЛЬКО РУЧНАЯ)"""
         try:
             template = self.post_templates.get(template_key)
             if not template:
                 print(f"❌ Шаблон {template_key} не найден")
-                return
+                return False
             
-            print(f"📢 Отправка автопоста: {template['title']}")
+            print(f"📢 Отправка поста: {template['title']}")
             
             # Форматируем сообщение
             message_text = f"📢 <b>{template['title']}</b>\n\n{template['content']}"
@@ -181,7 +179,7 @@ class AutoPostsManager:
                     result = self.bot.send_message(self.channel_id, message_text, keyboard)
                 
                 if result and result.get('ok'):
-                    print(f"✅ Автопост отправлен: {template['title']}")
+                    print(f"✅ Пост отправлен: {template['title']}")
                     
                     # Отправляем популярные товары после основного поста
                     time.sleep(3)
@@ -189,16 +187,51 @@ class AutoPostsManager:
                     
                     # Записываем статистику
                     self.log_post_statistics(template_key, 1, 0)
+                    return True
                 else:
-                    print(f"❌ Ошибка отправки автопоста: {result}")
+                    print(f"❌ Ошибка отправки поста: {result}")
                     self.log_post_statistics(template_key, 0, 1)
+                    return False
                     
             except Exception as e:
-                print(f"❌ Ошибка отправки автопоста: {e}")
+                print(f"❌ Ошибка отправки поста: {e}")
                 self.log_post_statistics(template_key, 0, 1)
+                return False
                 
         except Exception as e:
-            print(f"❌ Ошибка обработки автопоста {template_key}: {e}")
+            print(f"❌ Ошибка обработки поста {template_key}: {e}")
+            return False
+    
+    def send_custom_post(self, title, content, image_url=None):
+        """Отправка кастомного поста"""
+        try:
+            message_text = f"📢 <b>{title}</b>\n\n{content}"
+            message_text += f"\n\n🛍 Перейти в каталог: /start"
+            
+            keyboard = self.create_post_keyboard()
+            
+            if image_url:
+                result = self.bot.send_photo(self.channel_id, image_url, message_text, keyboard)
+            else:
+                result = self.bot.send_message(self.channel_id, message_text, keyboard)
+            
+            if result and result.get('ok'):
+                print(f"✅ Кастомный пост отправлен: {title}")
+                
+                # Отправляем товары после поста
+                time.sleep(3)
+                self.send_popular_products()
+                
+                self.log_post_statistics('custom', 1, 0)
+                return True
+            else:
+                print(f"❌ Ошибка отправки кастомного поста: {result}")
+                self.log_post_statistics('custom', 0, 1)
+                return False
+                
+        except Exception as e:
+            print(f"❌ Ошибка отправки кастомного поста: {e}")
+            return False
     
     def send_popular_products(self):
         """Отправка популярных товаров после основного поста"""
@@ -283,41 +316,6 @@ class AutoPostsManager:
             ]
         }
     
-    def send_custom_post(self, post_type, custom_content=None):
-        """Отправка кастомного поста"""
-        try:
-            if post_type in self.post_templates:
-                template = self.post_templates[post_type]
-            else:
-                # Создаем кастомный пост
-                template = {
-                    'title': 'Специальное сообщение',
-                    'content': custom_content or 'Специальное предложение для наших клиентов!',
-                    'image': 'https://images.pexels.com/photos/1464625/pexels-photo-1464625.jpeg'
-                }
-            
-            message_text = f"📢 <b>{template['title']}</b>\n\n{template['content']}"
-            message_text += f"\n\n🛍 Перейти в каталог: /start"
-            
-            keyboard = self.create_post_keyboard()
-            
-            # Отправляем
-            if template.get('image'):
-                result = self.bot.send_photo(self.channel_id, template['image'], message_text, keyboard)
-            else:
-                result = self.bot.send_message(self.channel_id, message_text, keyboard)
-            
-            if result and result.get('ok'):
-                print(f"✅ Кастомный пост отправлен: {template['title']}")
-                return True
-            else:
-                print(f"❌ Ошибка отправки кастомного поста: {result}")
-                return False
-                
-        except Exception as e:
-            print(f"❌ Ошибка отправки кастомного поста: {e}")
-            return False
-    
     def send_birthday_post(self, customer_name=None):
         """Отправка поздравления с днем рождения"""
         birthday_content = f'''🎉 <b>С Днем Рождения!</b>
@@ -334,7 +332,7 @@ class AutoPostsManager:
 
 💝 Выберите себе подарок в нашем каталоге!'''
         
-        return self.send_custom_post('birthday', birthday_content)
+        return self.send_custom_post('С Днем Рождения! 🎂', birthday_content)
     
     def send_flash_sale_post(self, discount_percent=30, duration_hours=24):
         """Отправка поста о флеш-распродаже"""
@@ -351,7 +349,7 @@ class AutoPostsManager:
 💨 Самые быстрые получат лучшие товары!
 🛒 Заказывайте прямо сейчас!'''
         
-        return self.send_custom_post('flash_sale', flash_content)
+        return self.send_custom_post('Флеш-распродажа! ⚡', flash_content)
     
     def send_new_product_post(self, product_id):
         """Отправка поста о новом товаре"""
@@ -372,7 +370,7 @@ class AutoPostsManager:
 🎁 <b>Для первых покупателей:</b>
 • Скидка 10% на новинку
 • Приоритетная доставка
-• Гарантия качества
+• Гарантия лучшей цены
 
 🚀 Будьте первыми, кто оценит новинку!'''
             
@@ -432,25 +430,6 @@ class AutoPostsManager:
             print(f"Ошибка получения статистики: {e}")
             return []
     
-    def send_manual_post(self, title, content, image_url=None):
-        """Ручная отправка поста"""
-        try:
-            message_text = f"📢 <b>{title}</b>\n\n{content}"
-            message_text += f"\n\n🛍 Перейти в каталог: /start"
-            
-            keyboard = self.create_post_keyboard()
-            
-            if image_url:
-                result = self.bot.send_photo(self.channel_id, image_url, message_text, keyboard)
-            else:
-                result = self.bot.send_message(self.channel_id, message_text, keyboard)
-            
-            return result and result.get('ok')
-            
-        except Exception as e:
-            print(f"Ошибка ручной отправки поста: {e}")
-            return False
-    
     def get_available_templates(self):
         """Получение доступных шаблонов"""
         templates_info = []
@@ -458,34 +437,23 @@ class AutoPostsManager:
             templates_info.append({
                 'key': key,
                 'title': template['title'],
-                'time': template.get('time', 'Ручная отправка'),
                 'description': template['content'][:100] + '...'
             })
         return templates_info
     
-    def update_post_schedule(self, morning_time='09:00', afternoon_time='14:00', evening_time='19:00'):
-        """Обновление расписания постов"""
-        self.post_templates['morning_greeting']['time'] = morning_time
-        self.post_templates['afternoon_promo']['time'] = afternoon_time
-        self.post_templates['evening_recommendations']['time'] = evening_time
+    def test_channel_connection(self):
+        """Тест соединения с каналом"""
+        test_message = f"🧪 <b>Тест канала</b>\n\n"
+        test_message += f"✅ Если вы видите это сообщение, интеграция работает!\n\n"
+        test_message += f"📅 Время: {datetime.now().strftime('%H:%M:%S')}\n"
+        test_message += f"🤖 Отправлено из веб-панели администратора"
         
-        print(f"✅ Расписание обновлено: {morning_time}, {afternoon_time}, {evening_time}")
-    
-    def create_autopost_table(self):
-        """Создание таблицы для статистики автопостов"""
         try:
-            self.db.execute_query('''
-                CREATE TABLE IF NOT EXISTS autopost_statistics (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    post_type TEXT NOT NULL,
-                    sent_count INTEGER DEFAULT 0,
-                    error_count INTEGER DEFAULT 0,
-                    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            print("✅ Таблица статистики автопостов создана")
+            result = self.bot.send_message(self.channel_id, test_message)
+            return result and result.get('ok')
         except Exception as e:
-            print(f"Ошибка создания таблицы автопостов: {e}")
+            print(f"Ошибка тестирования канала: {e}")
+            return False
 
 # Для обратной совместимости
-ScheduledPostsManager = AutoPostsManager
+AutoPostsManager = ScheduledPostsManager

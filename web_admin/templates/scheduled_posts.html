@@ -1,64 +1,65 @@
 {% extends "base.html" %}
 
-{% block title %}Автопосты - Админ-панель{% endblock %}
-{% block page_title %}Автоматические посты{% endblock %}
+{% block title %}Посты - Админ-панель{% endblock %}
+{% block page_title %}Управление постами{% endblock %}
 
 {% block content %}
-<!-- Информация о системе автопостов -->
+<!-- Информация о системе -->
 <div class="row mb-4">
     <div class="col-12">
         <div class="alert alert-info">
             <h5 class="alert-heading">
                 <i class="fas fa-info-circle me-2"></i>
-                Система автопостов
+                Система постов (ручное управление)
             </h5>
-            <p class="mb-2">
-                <strong>Автоматическая отправка:</strong> 3 раза в день в 09:00, 14:00 и 19:00
-            </p>
             <p class="mb-2">
                 <strong>Канал:</strong> -1002566537425 (публичные посты с товарами)
             </p>
             <p class="mb-0">
-                <strong>Контент:</strong> Приветствия, акции, рекомендации + популярные товары с отзывами
+                <strong>Управление:</strong> Все посты отправляются только вручную через эту панель
             </p>
         </div>
     </div>
 </div>
 
-<!-- Быстрые действия -->
+<!-- Готовые шаблоны -->
 <div class="row mb-4">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="fas fa-bolt me-2"></i>
-                    Быстрые действия
+                    <i class="fas fa-magic me-2"></i>
+                    Готовые шаблоны постов
                 </h5>
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-3 mb-3">
-                        <button type="button" class="btn btn-success w-100" onclick="sendTemplatePost('morning_greeting')">
-                            <i class="fas fa-sun me-2"></i>
-                            Утреннее приветствие
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <button type="button" class="btn btn-outline-warning w-100 h-100" onclick="sendTemplatePost('morning_greeting')">
+                            <i class="fas fa-sun fa-2x mb-2"></i>
+                            <div class="fw-bold">Утреннее приветствие</div>
+                            <small class="text-muted">Доброе утро и мотивация</small>
                         </button>
                     </div>
-                    <div class="col-md-3 mb-3">
-                        <button type="button" class="btn btn-warning w-100" onclick="sendTemplatePost('afternoon_promo')">
-                            <i class="fas fa-fire me-2"></i>
-                            Дневная акция
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <button type="button" class="btn btn-outline-info w-100 h-100" onclick="sendTemplatePost('afternoon_promo')">
+                            <i class="fas fa-fire fa-2x mb-2"></i>
+                            <div class="fw-bold">Дневная акция</div>
+                            <small class="text-muted">Горячие предложения дня</small>
                         </button>
                     </div>
-                    <div class="col-md-3 mb-3">
-                        <button type="button" class="btn btn-info w-100" onclick="sendTemplatePost('evening_recommendations')">
-                            <i class="fas fa-moon me-2"></i>
-                            Вечерние рекомендации
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <button type="button" class="btn btn-outline-primary w-100 h-100" onclick="sendTemplatePost('evening_recommendations')">
+                            <i class="fas fa-moon fa-2x mb-2"></i>
+                            <div class="fw-bold">Вечерние рекомендации</div>
+                            <small class="text-muted">Персональные советы</small>
                         </button>
                     </div>
-                    <div class="col-md-3 mb-3">
-                        <button type="button" class="btn btn-danger w-100" onclick="sendTemplatePost('flash_sale')">
-                            <i class="fas fa-bolt me-2"></i>
-                            Флеш-распродажа
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <button type="button" class="btn btn-outline-danger w-100 h-100" onclick="sendTemplatePost('flash_sale')">
+                            <i class="fas fa-bolt fa-2x mb-2"></i>
+                            <div class="fw-bold">Флеш-распродажа</div>
+                            <small class="text-muted">Срочная акция</small>
                         </button>
                     </div>
                 </div>
@@ -66,22 +67,32 @@
                 <hr>
                 
                 <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <button type="button" class="btn btn-outline-primary w-100" onclick="sendTemplatePost('weekend_sale')">
-                            <i class="fas fa-calendar-weekend me-2"></i>
-                            Выходные скидки
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <button type="button" class="btn btn-outline-success w-100 h-100" onclick="sendTemplatePost('weekend_sale')">
+                            <i class="fas fa-calendar-weekend fa-2x mb-2"></i>
+                            <div class="fw-bold">Выходные скидки</div>
+                            <small class="text-muted">Уикенд предложения</small>
                         </button>
                     </div>
-                    <div class="col-md-4 mb-3">
-                        <button type="button" class="btn btn-outline-success w-100" onclick="sendTemplatePost('new_arrivals')">
-                            <i class="fas fa-star me-2"></i>
-                            Новинки недели
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <button type="button" class="btn btn-outline-info w-100 h-100" onclick="sendTemplatePost('new_arrivals')">
+                            <i class="fas fa-star fa-2x mb-2"></i>
+                            <div class="fw-bold">Новинки недели</div>
+                            <small class="text-muted">Свежие поступления</small>
                         </button>
                     </div>
-                    <div class="col-md-4 mb-3">
-                        <button type="button" class="btn btn-outline-info w-100" onclick="showCustomPostModal()">
-                            <i class="fas fa-edit me-2"></i>
-                            Кастомный пост
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <button type="button" class="btn btn-outline-warning w-100 h-100" onclick="sendTemplatePost('special_promotion')">
+                            <i class="fas fa-gift fa-2x mb-2"></i>
+                            <div class="fw-bold">Специальная акция</div>
+                            <small class="text-muted">Особые предложения</small>
+                        </button>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <button type="button" class="btn btn-outline-success w-100 h-100" onclick="sendTemplatePost('birthday_greeting')">
+                            <i class="fas fa-birthday-cake fa-2x mb-2"></i>
+                            <div class="fw-bold">Поздравление</div>
+                            <small class="text-muted">День рождения</small>
                         </button>
                     </div>
                 </div>
@@ -90,66 +101,91 @@
     </div>
 </div>
 
-<!-- Статистика автопостов -->
+<!-- Кастомный пост и управление -->
 <div class="row">
     <div class="col-lg-8">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="fas fa-chart-bar me-2"></i>
-                    Расписание автопостов
+                    <i class="fas fa-edit me-2"></i>
+                    Создать кастомный пост
                 </h5>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4 text-center">
-                        <div class="card border-warning">
-                            <div class="card-body">
-                                <i class="fas fa-sun fa-3x text-warning mb-3"></i>
-                                <h5>Утром</h5>
-                                <h3 class="text-primary">09:00</h3>
-                                <p class="text-muted">Приветствие и мотивация</p>
-                                <span class="badge bg-success">Активно</span>
-                            </div>
-                        </div>
+                <form id="customPostForm">
+                    <div class="mb-3">
+                        <label for="custom_title" class="form-label">
+                            <i class="fas fa-heading me-1"></i>
+                            Заголовок поста
+                        </label>
+                        <input type="text" class="form-control" id="custom_title" 
+                               placeholder="Например: Специальное предложение!" required>
                     </div>
                     
-                    <div class="col-md-4 text-center">
-                        <div class="card border-info">
-                            <div class="card-body">
-                                <i class="fas fa-sun fa-3x text-info mb-3"></i>
-                                <h5>Днем</h5>
-                                <h3 class="text-primary">14:00</h3>
-                                <p class="text-muted">Акции и предложения</p>
-                                <span class="badge bg-success">Активно</span>
-                            </div>
-                        </div>
+                    <div class="mb-3">
+                        <label for="custom_content" class="form-label">
+                            <i class="fas fa-align-left me-1"></i>
+                            Текст поста
+                        </label>
+                        <textarea class="form-control" id="custom_content" rows="6" 
+                                  placeholder="Введите текст поста..." required></textarea>
+                        <div class="form-text">Поддерживается HTML разметка и эмодзи</div>
                     </div>
                     
-                    <div class="col-md-4 text-center">
-                        <div class="card border-primary">
-                            <div class="card-body">
-                                <i class="fas fa-moon fa-3x text-primary mb-3"></i>
-                                <h5>Вечером</h5>
-                                <h3 class="text-primary">19:00</h3>
-                                <p class="text-muted">Рекомендации и итоги</p>
-                                <span class="badge bg-success">Активно</span>
-                            </div>
-                        </div>
+                    <div class="mb-3">
+                        <label for="custom_image" class="form-label">
+                            <i class="fas fa-image me-1"></i>
+                            URL изображения (необязательно)
+                        </label>
+                        <input type="url" class="form-control" id="custom_image" 
+                               placeholder="https://images.pexels.com/photos/...">
                     </div>
-                </div>
-                
-                <div class="alert alert-success mt-4">
-                    <i class="fas fa-check-circle me-2"></i>
-                    <strong>Автопосты работают!</strong> Система автоматически отправляет посты 3 раза в день.
-                    После каждого поста добавляются популярные товары с отзывами.
-                </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-success" onclick="sendCustomPost()">
+                            <i class="fas fa-paper-plane me-2"></i>
+                            Отправить пост
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearForm()">
+                            <i class="fas fa-eraser me-2"></i>
+                            Очистить
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
     
-    <!-- Статистика -->
+    <!-- Управление и статистика -->
     <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>
+                    Управление
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-success" onclick="testChannelConnection()">
+                        <i class="fas fa-wifi me-2"></i>
+                        Тест канала
+                    </button>
+                    
+                    <button type="button" class="btn btn-outline-primary" onclick="sendPopularProducts()">
+                        <i class="fas fa-star me-2"></i>
+                        Отправить популярные товары
+                    </button>
+                    
+                    <button type="button" class="btn btn-outline-info" onclick="viewStatistics()">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Статистика постов
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Статистика -->
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
@@ -159,131 +195,32 @@
             </div>
             <div class="card-body">
                 <div class="text-center mb-4">
-                    <h2 class="text-success">21</h2>
+                    <h2 class="text-success">{{ stats|length if stats else 0 }}</h2>
                     <p class="text-muted">постов отправлено</p>
                 </div>
                 
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between">
-                        <span>🌅 Утренние:</span>
-                        <strong>7</strong>
-                    </div>
-                    <div class="progress mb-2" style="height: 6px;">
-                        <div class="progress-bar bg-warning" style="width: 33%"></div>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between">
-                        <span>☀️ Дневные:</span>
-                        <strong>7</strong>
-                    </div>
-                    <div class="progress mb-2" style="height: 6px;">
-                        <div class="progress-bar bg-info" style="width: 33%"></div>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between">
-                        <span>🌙 Вечерние:</span>
-                        <strong>7</strong>
-                    </div>
-                    <div class="progress mb-2" style="height: 6px;">
-                        <div class="progress-bar bg-primary" style="width: 33%"></div>
-                    </div>
-                </div>
-                
-                <hr>
-                
-                <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-outline-success btn-sm" onclick="testChannelConnection()">
-                        <i class="fas fa-wifi me-1"></i>
-                        Тест канала
-                    </button>
-                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="viewDetailedStats()">
-                        <i class="fas fa-chart-line me-1"></i>
-                        Подробная статистика
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Последние посты -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h6 class="mb-0">
-                    <i class="fas fa-history me-1"></i>
-                    Последние посты
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="timeline">
-                    <div class="timeline-item">
-                        <div class="timeline-marker bg-success"></div>
-                        <div class="timeline-content">
-                            <h6 class="mb-1">Вечерние рекомендации</h6>
-                            <small class="text-muted">Сегодня в 19:00</small>
+                {% if stats %}
+                    {% for stat in stats %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <div class="fw-bold">{{ stat[0] }}</div>
+                            <small class="text-muted">{{ stat[4][:10] if stat[4] else 'Недавно' }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-success">{{ stat[1] }}</span>
+                            {% if stat[2] > 0 %}
+                                <span class="badge bg-danger">{{ stat[2] }} ошибок</span>
+                            {% endif %}
                         </div>
                     </div>
-                    <div class="timeline-item">
-                        <div class="timeline-marker bg-info"></div>
-                        <div class="timeline-content">
-                            <h6 class="mb-1">Дневная акция</h6>
-                            <small class="text-muted">Сегодня в 14:00</small>
-                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-chart-bar fa-2x mb-2"></i>
+                        <p>Пока нет статистики</p>
+                        <small>Отправьте первый пост!</small>
                     </div>
-                    <div class="timeline-item">
-                        <div class="timeline-marker bg-warning"></div>
-                        <div class="timeline-content">
-                            <h6 class="mb-1">Утреннее приветствие</h6>
-                            <small class="text-muted">Сегодня в 09:00</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Модальное окно кастомного поста -->
-<div class="modal fade" id="customPostModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-edit me-2"></i>
-                    Создать кастомный пост
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="customPostForm">
-                    <div class="mb-3">
-                        <label for="custom_title" class="form-label">Заголовок поста</label>
-                        <input type="text" class="form-control" id="custom_title" 
-                               placeholder="Например: Специальное предложение!" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="custom_content" class="form-label">Текст поста</label>
-                        <textarea class="form-control" id="custom_content" rows="6" 
-                                  placeholder="Введите текст поста..." required></textarea>
-                        <div class="form-text">Поддерживается HTML разметка и эмодзи</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="custom_image" class="form-label">URL изображения (необязательно)</label>
-                        <input type="url" class="form-control" id="custom_image" 
-                               placeholder="https://images.pexels.com/photos/...">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                <button type="button" class="btn btn-success" onclick="sendCustomPost()">
-                    <i class="fas fa-paper-plane me-2"></i>
-                    Отправить пост
-                </button>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -293,7 +230,12 @@
 {% block scripts %}
 <script>
 function sendTemplatePost(templateType) {
-    if (confirm(`Отправить пост "${templateType}" прямо сейчас?`)) {
+    if (confirm(`Отправить пост "${getTemplateName(templateType)}" в канал?`)) {
+        const button = event.target;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Отправка...';
+        button.disabled = true;
+        
         fetch('/api/send_template_post', {
             method: 'POST',
             headers: {
@@ -306,20 +248,20 @@ function sendTemplatePost(templateType) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('✅ Пост отправлен в канал!');
+                alert('✅ Пост отправлен в канал!\n\n' + data.message);
+                location.reload();
             } else {
                 alert('❌ Ошибка отправки: ' + data.error);
             }
         })
         .catch(error => {
-            alert('❌ Ошибка отправки поста');
+            alert('❌ Ошибка отправки поста: ' + error);
+        })
+        .finally(() => {
+            button.innerHTML = originalText;
+            button.disabled = false;
         });
     }
-}
-
-function showCustomPostModal() {
-    const modal = new bootstrap.Modal(document.getElementById('customPostModal'));
-    modal.show();
 }
 
 function sendCustomPost() {
@@ -332,33 +274,49 @@ function sendCustomPost() {
         return;
     }
     
-    fetch('/api/send_custom_post', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            title: title,
-            content: content,
-            image_url: image
+    if (confirm('Отправить кастомный пост в канал?')) {
+        const button = event.target;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Отправка...';
+        button.disabled = true;
+        
+        fetch('/api/send_custom_post', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                title: title,
+                content: content,
+                image_url: image
+            })
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('✅ Кастомный пост отправлен!');
-            bootstrap.Modal.getInstance(document.getElementById('customPostModal')).hide();
-            document.getElementById('customPostForm').reset();
-        } else {
-            alert('❌ Ошибка отправки: ' + data.error);
-        }
-    })
-    .catch(error => {
-        alert('❌ Ошибка отправки поста');
-    });
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Кастомный пост отправлен!');
+                clearForm();
+                location.reload();
+            } else {
+                alert('❌ Ошибка отправки: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('❌ Ошибка отправки поста: ' + error);
+        })
+        .finally(() => {
+            button.innerHTML = originalText;
+            button.disabled = false;
+        });
+    }
 }
 
 function testChannelConnection() {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Тестирование...';
+    button.disabled = true;
+    
     fetch('/api/test_channel', {
         method: 'POST'
     })
@@ -371,52 +329,90 @@ function testChannelConnection() {
         }
     })
     .catch(error => {
-        alert('❌ Ошибка проверки канала');
+        alert('❌ Ошибка проверки канала: ' + error);
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
     });
 }
 
-function viewDetailedStats() {
-    alert('📊 Подробная статистика автопостов:\n\n' +
-          '• Утренние посты: 100% доставляемость\n' +
-          '• Дневные акции: 98% доставляемость\n' +
-          '• Вечерние рекомендации: 99% доставляемость\n\n' +
-          'Средняя вовлеченность: 15-20% от подписчиков');
+function sendPopularProducts() {
+    if (confirm('Отправить популярные товары в канал?')) {
+        fetch('/api/send_popular_products', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`✅ Отправлено ${data.count} популярных товаров!`);
+            } else {
+                alert('❌ Ошибка отправки товаров: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('❌ Ошибка отправки товаров');
+        });
+    }
+}
+
+function clearForm() {
+    document.getElementById('custom_title').value = '';
+    document.getElementById('custom_content').value = '';
+    document.getElementById('custom_image').value = '';
+}
+
+function viewStatistics() {
+    alert('📊 Статистика постов:\n\n' +
+          '• Всего отправлено: {{ stats|length if stats else 0 }} постов\n' +
+          '• Успешных: {{ stats|sum(attribute=1) if stats else 0 }}\n' +
+          '• Ошибок: {{ stats|sum(attribute=2) if stats else 0 }}\n\n' +
+          'Подробная статистика в разработке');
+}
+
+function getTemplateName(templateType) {
+    const names = {
+        'morning_greeting': 'Утреннее приветствие',
+        'afternoon_promo': 'Дневная акция',
+        'evening_recommendations': 'Вечерние рекомендации',
+        'flash_sale': 'Флеш-распродажа',
+        'weekend_sale': 'Выходные скидки',
+        'new_arrivals': 'Новинки недели',
+        'special_promotion': 'Специальная акция',
+        'birthday_greeting': 'Поздравление'
+    };
+    return names[templateType] || templateType;
 }
 </script>
 
 <style>
-.timeline {
-    position: relative;
-    padding-left: 30px;
+.btn {
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    transition: all 0.3s ease;
 }
 
-.timeline-item {
-    position: relative;
-    margin-bottom: 20px;
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-.timeline-marker {
-    position: absolute;
-    left: -35px;
-    top: 5px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
+.btn i {
+    margin-bottom: 8px;
 }
 
-.timeline-item:not(:last-child)::before {
-    content: '';
-    position: absolute;
-    left: -29px;
-    top: 17px;
-    width: 2px;
-    height: calc(100% + 5px);
-    background-color: #dee2e6;
+.btn .fw-bold {
+    font-size: 1rem;
+    margin-bottom: 4px;
 }
 
-.timeline-content h6 {
-    margin-bottom: 2px;
-    font-weight: 600;
+.btn small {
+    font-size: 0.8rem;
+    opacity: 0.8;
 }
 </style>
 {% endblock %}

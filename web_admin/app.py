@@ -1286,6 +1286,8 @@ def orders():
                  'success': True,
 -                'bot_name': 'Shop Bot'
                 'bot_name': 'Shop Bot',
+                'message': 'Связь с Telegram API работает корректно'
+                'bot_name': 'Shop Bot',
                 'message': 'Соединение с Telegram API работает корректно'
 +                'bot_name': 'Shop Bot',
 +                'message': 'Соединение с Telegram API работает'
@@ -1560,6 +1562,98 @@ def edit_product(product_id):
 +    
 +    return redirect(url_for('customers'))
 +
+@app.route('/api/send_template_post', methods=['POST'])
+@login_required
+def api_send_template_post():
+    try:
+        data = request.get_json()
+        template_type = data.get('template_type')
+        
+        if not template_type:
+            return jsonify({'success': False, 'error': 'Не указан тип шаблона'})
+        
+        # Отправляем через систему постов
+        if hasattr(telegram_bot, 'scheduled_posts') and telegram_bot.scheduled_posts:
+            result = telegram_bot.scheduled_posts.send_template_post(template_type)
+            if result:
+                return jsonify({
+                    'success': True, 
+                    'message': f'Шаблон "{template_type}" отправлен в канал'
+                })
+            else:
+                return jsonify({'success': False, 'error': 'Ошибка отправки в канал'})
+        else:
+            return jsonify({'success': False, 'error': 'Система постов недоступна'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/send_custom_post', methods=['POST'])
+@login_required
+def api_send_custom_post():
+    try:
+        data = request.get_json()
+        title = data.get('title')
+        content = data.get('content')
+        image_url = data.get('image_url')
+        
+        if not title or not content:
+            return jsonify({'success': False, 'error': 'Заполните заголовок и текст'})
+        
+        # Отправляем кастомный пост
+        if hasattr(telegram_bot, 'scheduled_posts') and telegram_bot.scheduled_posts:
+            result = telegram_bot.scheduled_posts.send_custom_post(title, content, image_url)
+            if result:
+                return jsonify({
+                    'success': True, 
+                    'message': f'Кастомный пост "{title}" отправлен'
+                })
+            else:
+                return jsonify({'success': False, 'error': 'Ошибка отправки в канал'})
+        else:
+            return jsonify({'success': False, 'error': 'Система постов недоступна'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/test_channel', methods=['POST'])
+@login_required
+def api_test_channel():
+    try:
+        # Отправляем тестовое сообщение
+        if hasattr(telegram_bot, 'scheduled_posts') and telegram_bot.scheduled_posts:
+            result = telegram_bot.scheduled_posts.test_channel_connection()
+            if result:
+                return jsonify({
+                    'success': True, 
+                    'message': 'Тестовое сообщение отправлено в канал'
+                })
+            else:
+                return jsonify({'success': False, 'error': 'Ошибка отправки в канал'})
+        else:
+            return jsonify({'success': False, 'error': 'Система постов недоступна'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/send_popular_products', methods=['POST'])
+@login_required
+def api_send_popular_products():
+    try:
+        # Отправляем популярные товары
+        if hasattr(telegram_bot, 'scheduled_posts') and telegram_bot.scheduled_posts:
+            telegram_bot.scheduled_posts.send_popular_products()
+            return jsonify({
+                'success': True, 
+                'message': 'Популярные товары отправлены',
+                'count': 3
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Система постов недоступна'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
  @app.route('/export_orders')
  @login_required
  def export_orders():
