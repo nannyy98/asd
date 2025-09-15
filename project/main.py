@@ -710,3 +710,4 @@ def main():
         print(f"❌ Ошибка запуска бота: {e}")
 
 if __name__ == "__main__":
+    main()
