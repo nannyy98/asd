@@ -17,11 +17,30 @@
      """Клавиатура с категориями"""
      keyboard = []
      
-     for i in range(0, len(categories), 2):
-         row = [f"{categories[i][3]} {categories[i][1]}"]
-         if i + 1 < len(categories):
-             row.append(f"{categories[i + 1][3]} {categories[i + 1][1]}")
-         keyboard.append(row)
+    try:
+        for i in range(0, len(categories), 2):
+            row = []
+            # Первая категория в ряду
+            emoji = categories[i][3] if len(categories[i]) > 3 and categories[i][3] else '📦'
+            name = categories[i][1] if len(categories[i]) > 1 else 'Категория'
+            row.append(f"{emoji} {name}")
+            
+            # Вторая категория в ряду (если есть)
+            if i + 1 < len(categories):
+                emoji2 = categories[i + 1][3] if len(categories[i + 1]) > 3 and categories[i + 1][3] else '📦'
+                name2 = categories[i + 1][1] if len(categories[i + 1]) > 1 else 'Категория'
+                row.append(f"{emoji2} {name2}")
+            
+            keyboard.append(row)
+    except Exception as e:
+        print(f"DEBUG: Ошибка создания клавиатуры категорий: {e}")
+        # Создаем простую клавиатуру
+        for category in categories:
+            try:
+                name = category[1] if len(category) > 1 else 'Категория'
+                keyboard.append([f"📦 {name}"])
+            except:
+                continue
      
 -    keyboard.append(['🔙 Главная'])
 +    keyboard.append(['🏠 Главная'])
@@ -36,11 +55,30 @@
      """Клавиатура с подкатегориями/брендами"""
      keyboard = []
      
-     for i in range(0, len(subcategories), 2):
-         row = [f"{subcategories[i][2]} {subcategories[i][1]}"]
-         if i + 1 < len(subcategories):
-             row.append(f"{subcategories[i + 1][2]} {subcategories[i + 1][1]}")
-         keyboard.append(row)
+    try:
+        for i in range(0, len(subcategories), 2):
+            row = []
+            # Первая подкатегория в ряду
+            emoji = subcategories[i][2] if len(subcategories[i]) > 2 and subcategories[i][2] else '🏷'
+            name = subcategories[i][1] if len(subcategories[i]) > 1 else 'Подкатегория'
+            row.append(f"{emoji} {name}")
+            
+            # Вторая подкатегория в ряду (если есть)
+            if i + 1 < len(subcategories):
+                emoji2 = subcategories[i + 1][2] if len(subcategories[i + 1]) > 2 and subcategories[i + 1][2] else '🏷'
+                name2 = subcategories[i + 1][1] if len(subcategories[i + 1]) > 1 else 'Подкатегория'
+                row.append(f"{emoji2} {name2}")
+            
+            keyboard.append(row)
+    except Exception as e:
+        print(f"DEBUG: Ошибка создания клавиатуры подкатегорий: {e}")
+        # Создаем простую клавиатуру
+        for subcategory in subcategories:
+            try:
+                name = subcategory[1] if len(subcategory) > 1 else 'Подкатегория'
+                keyboard.append([f"🏷 {name}"])
+            except:
+                continue
      
 -    keyboard.append(['🔙 К категориям', '🏠 Главная'])
 +    keyboard.append(['🔙 Назад', '🏠 Главная'])

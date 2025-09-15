@@ -67,10 +67,10 @@ class MessageHandler:
                 self.show_loyalty_program(chat_id, user_id, language)
             elif text in ['🎁 Промокоды', '🎁 Promokodlar']:
                 self.show_promo_codes(chat_id, user_id, language)
-            elif text.startswith('🛍 '):
-                self.handle_product_selection(message, user_id, language)
             elif text.startswith('📱 ') or text.startswith('👕 ') or text.startswith('🏠 ') or text.startswith('⚽ ') or text.startswith('💄 ') or text.startswith('📚 '):
                 self.handle_category_selection(message, user_id, language)
+            elif text.startswith('🛍 '):
+                self.handle_product_selection(message, user_id, language)
             elif text.startswith('📦 Оформить заказ') or text.startswith('📦 Buyurtma berish'):
                 self.start_order_process(chat_id, user_id, language)
             elif text.startswith('🗑 Очистить корзину') or text.startswith('🗑 Savatni tozalash'):
@@ -246,13 +246,23 @@ class MessageHandler:
     
     def show_catalog(self, chat_id, language):
         """Показ каталога"""
-        categories = self.db.get_categories()
-        if categories:
-            catalog_text = "🛍 <b>Каталог товаров</b>\n\nВыберите категорию:"
-            keyboard = create_categories_keyboard(categories)
-            self.bot.send_message(chat_id, catalog_text, keyboard)
-        else:
-            self.bot.send_message(chat_id, "❌ Каталог временно недоступен")
+        try:
+            categories = self.db.get_categories()
+            print(f"DEBUG: Получено категорий: {len(categories) if categories else 0}")
+            
+            if categories:
+                catalog_text = "🛍 <b>Каталог товаров</b>\n\nВыберите категорию:"
+                keyboard = create_categories_keyboard(categories)
+                self.bot.send_message(chat_id, catalog_text, keyboard)
+            else:
+                error_text = "❌ Каталог временно недоступен\n\n💡 Попробуйте позже или обратитесь к администратору"
+                keyboard = create_main_keyboard()
+                self.bot.send_message(chat_id, error_text, keyboard)
+        except Exception as e:
+            print(f"DEBUG: Ошибка показа каталога: {e}")
+            error_text = "❌ Ошибка загрузки каталога\n\n🔄 Попробуйте еще раз"
+            keyboard = create_main_keyboard()
+            self.bot.send_message(chat_id, error_text, keyboard)
     
     def handle_category_selection(self, message, user_id, language):
         """Обработка выбора категории"""
@@ -261,14 +271,18 @@ class MessageHandler:
         text = message.get('text', '')
         
         # Извлекаем название категории из текста кнопки
-        category_name = text.split(' ', 1)[1] if ' ' in text else text
+        # Убираем эмодзи и получаем название категории
+        if ' ' in text:
+            category_name = text.split(' ', 1)[1].strip()
+        else:
+            category_name = text.strip()
         
         # Находим категорию по названию
         categories = self.db.get_categories()
         selected_category = None
         
         for category in categories:
-            if category[1] == category_name:
+            if category[1].strip() == category_name:
                 selected_category = category
                 break
         
@@ -277,32 +291,52 @@ class MessageHandler:
             self.user_states[telegram_id] = f'viewing_category_{category_id}'
             self.show_category_products(chat_id, category_id, language, telegram_id)
         else:
+            print(f"DEBUG: Категория не найдена. Искали: '{category_name}', Доступные: {[cat[1] for cat in categories]}")
             self.bot.send_message(chat_id, "❌ Категория не найдена")
+            # Показываем каталог заново
+            self.show_catalog(chat_id, language)
     
     def show_category_products(self, chat_id, category_id, language, telegram_id):
         """Показ товаров категории через подкатегории"""
-        subcategories = self.db.get_products_by_category(category_id)
+        try:
+            subcategories = self.db.get_products_by_category(category_id)
+            print(f"DEBUG: Подкатегории для категории {category_id}: {subcategories}")
+        except Exception as e:
+            print(f"DEBUG: Ошибка получения подкатегорий: {e}")
+            subcategories = []
         
         if subcategories:
-            category_name = self.db.execute_query(
-                'SELECT name FROM categories WHERE id = ?', (category_id,)
-            )[0][0]
+            try:
+                category_result = self.db.execute_query(
+                    'SELECT name FROM categories WHERE id = ?', (category_id,)
+                )
+                category_name = category_result[0][0] if category_result else "Категория"
+            except Exception as e:
+                print(f"DEBUG: Ошибка получения названия категории: {e}")
+                category_name = "Категория"
             
             subcategory_text = f"📂 <b>{category_name}</b>\n\nВыберите бренд или подкатегорию:"
             keyboard = create_subcategories_keyboard(subcategories)
             self.bot.send_message(chat_id, subcategory_text, keyboard)
         else:
             # Если нет подкатегорий, показываем товары напрямую
-            products = self.db.execute_query('''
-                SELECT * FROM products 
-                WHERE category_id = ? AND is_active = 1 
-                ORDER BY name LIMIT 10
-            ''', (category_id,))
+            try:
+                products = self.db.execute_query('''
+                    SELECT * FROM products 
+                    WHERE category_id = ? AND is_active = 1 
+                    ORDER BY name LIMIT 10
+                ''', (category_id,))
+                print(f"DEBUG: Товары в категории {category_id}: {len(products) if products else 0}")
+            except Exception as e:
+                print(f"DEBUG: Ошибка получения товаров: {e}")
+                products = []
             
             if products:
                 self.show_products_list(chat_id, products, language)
             else:
-                self.bot.send_message(chat_id, "❌ В этой категории пока нет товаров")
+                no_products_text = "❌ В этой категории пока нет товаров\n\n🔙 Вернитесь в каталог для выбора другой категории"
+                keyboard = create_back_keyboard()
+                self.bot.send_message(chat_id, no_products_text, keyboard)
     
     def handle_subcategory_selection(self, message, user_id, language):
         """Обработка выбора подкатегории"""
@@ -311,35 +345,84 @@ class MessageHandler:
         text = message.get('text', '')
         
         # Извлекаем название подкатегории
-        subcategory_name = text.split(' ', 1)[1] if ' ' in text else text
+        if ' ' in text:
+            subcategory_name = text.split(' ', 1)[1].strip()
+        else:
+            subcategory_name = text.strip()
+        
+        print(f"DEBUG: Ищем подкатегорию: '{subcategory_name}'")
         
         # Находим подкатегорию
-        subcategory = self.db.execute_query(
-            'SELECT id FROM subcategories WHERE name = ?', (subcategory_name,)
-        )
+        try:
+            subcategory = self.db.execute_query(
+                'SELECT id FROM subcategories WHERE name = ?', (subcategory_name,)
+            )
+            print(f"DEBUG: Результат поиска подкатегории: {subcategory}")
+        except Exception as e:
+            print(f"DEBUG: Ошибка поиска подкатегории: {e}")
+            subcategory = None
         
         if subcategory:
             subcategory_id = subcategory[0][0]
             self.user_states[telegram_id] = f'viewing_subcategory_{subcategory_id}'
             
             # Получаем товары подкатегории
-            products = self.db.get_products_by_subcategory(subcategory_id)
+            try:
+                products = self.db.get_products_by_subcategory(subcategory_id)
+                print(f"DEBUG: Товары в подкатегории {subcategory_id}: {len(products) if products else 0}")
+            except Exception as e:
+                print(f"DEBUG: Ошибка получения товаров подкатегории: {e}")
+                products = []
             
             if products:
                 self.show_products_list(chat_id, products, language)
             else:
-                self.bot.send_message(chat_id, "❌ В этой подкатегории пока нет товаров")
+                no_products_text = "❌ В этой подкатегории пока нет товаров\n\n🔙 Выберите другую подкатегорию"
+                keyboard = create_back_keyboard()
+                self.bot.send_message(chat_id, no_products_text, keyboard)
         else:
+            print(f"DEBUG: Подкатегория '{subcategory_name}' не найдена")
             self.bot.send_message(chat_id, "❌ Подкатегория не найдена")
+            # Возвращаем к каталогу
+            self.show_catalog(chat_id, language)
     
     def show_products_list(self, chat_id, products, language):
         """Показ списка товаров"""
         if not products:
-            self.bot.send_message(chat_id, "❌ Товары не найдены")
+            no_products_text = "❌ Товары не найдены\n\n🔍 Попробуйте поиск или выберите другую категорию"
+            keyboard = create_main_keyboard()
+            self.bot.send_message(chat_id, no_products_text, keyboard)
             return
         
-        for product in products[:5]:  # Показываем первые 5 товаров
-            self.show_product_card(chat_id, product, language)
+        try:
+            products_text = f"🛍 <b>Найдено товаров: {len(products)}</b>\n\n"
+            
+            # Показываем список товаров кнопками
+            products_keyboard = []
+            for product in products[:10]:  # Показываем до 10 товаров
+                try:
+                    name = product[1] if len(product) > 1 else 'Товар'
+                    price = product[3] if len(product) > 3 else 0
+                    products_keyboard.append([f"🛍 {name} - ${price:.2f}"])
+                except Exception as e:
+                    print(f"DEBUG: Ошибка обработки товара: {e}")
+                    continue
+            
+            products_keyboard.append(['🔙 Назад', '🏠 Главная'])
+            
+            keyboard = {
+                'keyboard': products_keyboard,
+                'resize_keyboard': True,
+                'one_time_keyboard': False
+            }
+            
+            self.bot.send_message(chat_id, products_text, keyboard)
+            
+        except Exception as e:
+            print(f"DEBUG: Ошибка показа списка товаров: {e}")
+            error_text = "❌ Ошибка отображения товаров"
+            keyboard = create_main_keyboard()
+            self.bot.send_message(chat_id, error_text, keyboard)
     
     def show_product_card(self, chat_id, product, language):
         """Показ карточки товара"""

@@ -50,3 +50,20 @@ CREATE TABLE IF NOT EXISTS autopost_statistics (
         ''')
     
     def create_tables(self, cursor):
+
+    def get_products_by_subcategory(self, subcategory_id, limit=10, offset=0):
+        """Получение товаров по подкатегории"""
+        try:
+            products = self.execute_query('''
+                SELECT * FROM products 
+                WHERE subcategory_id = ? AND is_active = 1 
+                ORDER BY name 
+                LIMIT ? OFFSET ?
+            ''', (subcategory_id, limit, offset))
+            
+            print(f"DEBUG: Товары в подкатегории {subcategory_id}: {len(products) if products else 0}")
+            return products
+            
+        except Exception as e:
+            print(f"DEBUG: Ошибка получения товаров подкатегории: {e}")
+            return []
