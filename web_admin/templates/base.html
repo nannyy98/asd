@@ -1,0 +1,37 @@
+@@ .. @@
+                     <div class="dropdown">
+                         <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" 
+                                 data-bs-toggle="dropdown" aria-expanded="false">
+                             <i class="fas fa-user me-1"></i>
+-                            AdminUser
++                            {{ session.username or 'AdminUser' }}
+                         </button>
+                         <ul class="dropdown-menu">
++                            <li>
++                                <form method="POST" action="{{ url_for('reload_bot_data') }}" style="display: inline;">
++                                    <button type="submit" class="dropdown-item">
++                                        <i class="fas fa-sync me-2"></i>Обновить данные бота
++                                    </button>
++                                </form>
++                            </li>
+                             <li>
+                                 <form method="POST" action="{{ url_for('force_reload_bot') }}" style="display: inline;">
+                                     <button type="submit" class="dropdown-item" onclick="return confirm('Принудительно перезагрузить все данные в боте?')">
+@@ .. @@
+                     <div class="badge bg-success ms-2">
+                         <i class="fas fa-circle me-1"></i>
+-                        Онлайн
++                        {{ 'Онлайн' if db else 'Офлайн' }}
+                     </div>
+                 </div>
+             </div>
+@@ .. @@
+             <!-- Flash messages -->
+             {% with messages = get_flashed_messages() %}
+                 {% if messages %}
+                     {% for message in messages %}
+-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
++                        <div class="alert {{ 'alert-danger' if 'Ошибка' in message or 'ошибка' in message else 'alert-success' }} alert-dismissible fade show" role="alert">
+                             <i class="fas fa-{{ 'exclamation-triangle' if 'Ошибка' in message or 'ошибка' in message else 'check-circle' }} me-2"></i>
+                             {{ message }}
+                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
