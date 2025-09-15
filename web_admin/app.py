@@ -1285,6 +1285,8 @@ def orders():
              return jsonify({
                  'success': True,
 -                'bot_name': 'Shop Bot'
+                'bot_name': 'Shop Bot',
+                'message': 'Соединение с Telegram API работает корректно'
 +                'bot_name': 'Shop Bot',
 +                'message': 'Соединение с Telegram API работает'
              })
@@ -1293,6 +1295,164 @@ def orders():
 @@ .. @@
              'error': str(e)
          })
+
+@app.route('/api/send_template_post', methods=['POST'])
+@login_required
+def send_template_post():
+    try:
+        data = request.get_json()
+        template_type = data.get('template_type')
+        
+        # Создаем экземпляр AutoPostsManager
+        from scheduled_posts import AutoPostsManager
+        posts_manager = AutoPostsManager(telegram_bot, db)
+        
+        # Отправляем пост по шаблону
+        success = posts_manager.send_custom_post(template_type)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Пост "{template_type}" отправлен в канал'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Ошибка отправки поста'
+            })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route('/api/send_custom_post', methods=['POST'])
+@login_required
+def send_custom_post():
+    try:
+        data = request.get_json()
+        title = data.get('title')
+        content = data.get('content')
+        image_url = data.get('image_url')
+        
+        # Создаем экземпляр AutoPostsManager
+        from scheduled_posts import AutoPostsManager
+        posts_manager = AutoPostsManager(telegram_bot, db)
+        
+        # Отправляем кастомный пост
+        success = posts_manager.send_manual_post(title, content, image_url)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Кастомный пост отправлен в канал'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Ошибка отправки кастомного поста'
+            })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route('/api/test_channel', methods=['POST'])
+@login_required
+def test_channel():
+    try:
+        test_message = f"🧪 <b>Тест канала</b>\n\n"
+        test_message += f"✅ Это тестовое сообщение из веб-панели\n"
+        test_message += f"📅 Время: {datetime.now().strftime('%H:%M:%S')}\n\n"
+        test_message += f"🔗 Если вы видите это сообщение, интеграция работает!"
+        
+        test_keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': '🛒 Открыть каталог', 'url': 'https://t.me/your_bot_username?start=catalog'},
+                    {'text': '💬 Поддержка', 'url': 'https://t.me/your_support_username'}
+                ]
+            ]
+        }
+        
+        result = telegram_bot.send_message("-1002566537425", test_message, test_keyboard)
+        
+        if result and result.get('ok'):
+            return jsonify({
+                'success': True,
+                'message': 'Тестовое сообщение отправлено в канал'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Ошибка отправки в канал: {result}'
+            })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route('/edit_product/<int:product_id>', methods=['GET', 'POST'])
+@login_required
+def edit_product(product_id):
+    if request.method == 'POST':
+        name = request.form['name']
+        description = request.form.get('description', '')
+        price = float(request.form['price'])
+        cost_price = float(request.form.get('cost_price', 0))
+        category_id = int(request.form['category_id'])
+        stock = int(request.form['stock'])
+        
+        # Обработка изображения
+        image_url = request.form.get('current_image_url', '')
+        if 'image_file' in request.files and request.files['image_file'].filename:
+            file = request.files['image_file']
+            if file and allowed_file(file.filename):
+                filename = str(uuid.uuid4()) + '.' + file.filename.rsplit('.', 1)[1].lower()
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+                image_url = f'/static/uploads/{filename}'
+        elif request.form.get('image_url'):
+            image_url = request.form['image_url']
+        
+        # Обновляем товар
+        result = db.execute_query('''
+            UPDATE products 
+            SET name = ?, description = ?, price = ?, cost_price = ?, 
+                category_id = ?, stock = ?, image_url = ?, updated_at = ?
+            WHERE id = ?
+        ''', (name, description, price, cost_price, category_id, stock, image_url, 
+              datetime.now().strftime('%Y-%m-%d %H:%M:%S'), product_id))
+        
+        if result is not None:
+            # Уведомляем админов в Telegram
+            admin_message = f"✏️ <b>Товар обновлен!</b>\n\n"
+            admin_message += f"🛍 <b>{name}</b>\n"
+            admin_message += f"💰 Цена: ${price:.2f}\n"
+            admin_message += f"📦 Остаток: {stock} шт.\n"
+            admin_message += f"📅 Обновлен через веб-панель"
+            
+            telegram_bot.notify_admins(admin_message)
+            telegram_bot.trigger_bot_data_reload()
+            
+            flash(f'Товар "{name}" успешно обновлен!')
+            return redirect(url_for('products'))
+        else:
+            flash('Ошибка обновления товара')
+    
+    # Получаем данные товара
+    product = db.get_product_by_id(product_id)
+    if not product:
+        flash('Товар не найден')
+        return redirect(url_for('products'))
+    
+    categories = db.get_categories()
+    return render_template('edit_product.html', product=product, categories=categories or [])
 
 +@app.route('/edit_product/<int:product_id>', methods=['GET', 'POST'])
 +@login_required
@@ -1404,7 +1564,45 @@ def orders():
  @login_required
  def export_orders():
 -    flash('Экспорт заказов будет добавлен в следующей версии')
-+    if not db:
+    try:
+        import csv
+        import io
+        from flask import make_response
+        
+        # Получаем все заказы
+        orders_data = db.execute_query('''
+            SELECT o.id, o.total_amount, o.status, o.created_at, u.name, u.phone, u.email,
+                   o.delivery_address, o.payment_method
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            ORDER BY o.created_at DESC
+        ''')
+        
+        # Создаем CSV
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Заголовки
+        writer.writerow(['ID заказа', 'Сумма', 'Статус', 'Дата', 'Клиент', 'Телефон', 'Email', 'Адрес', 'Оплата'])
+        
+        # Данные
+        for order in orders_data or []:
+            writer.writerow([
+                order[0], f"${order[1]:.2f}", order[2], order[3], 
+                order[4], order[5] or '', order[6] or '', 
+                order[7] or '', order[8]
+            ])
+        
+        # Создаем ответ
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = f'attachment; filename=orders_{datetime.now().strftime("%Y%m%d")}.csv'
+        
+        return response
+        
+    except Exception as e:
+        flash(f'Ошибка экспорта заказов: {e}')
+        return redirect(url_for('orders'))
 +        flash('База данных недоступна')
 +        return redirect(url_for('orders'))
 +    
