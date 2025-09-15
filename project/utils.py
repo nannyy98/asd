@@ -292,4 +292,3 @@ def schedule_push_notification(notification_manager, user_id, title, message, de
     """Планирование отложенного push-уведомления"""
     notification_manager.send_delayed_push(
         user_id, title, message, delay_minutes, notification_type
-    )
